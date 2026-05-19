@@ -119,3 +119,23 @@ YamanoteRunner/
 │   └── tasks.json
 ├── README.md
 └── Makefile
+```
+
+## 開発環境
+
+- Xcode 16.2 以降
+- iOS 17.0 以降
+- SwiftUI
+- CLI ビルド: `xcodebuild`
+- シミュレータ実行: `xcrun simctl`
+
+## CLI でのビルドと実行
+
+```bash
+make build
+make run
+```
+
+既定のシミュレータは `iPhone 16 Pro`、Bundle ID は `com.youbo0129ueno.YamanoteRunner` です。
+
+詳細な手順は [docs/development.md](docs/development.md) を参照してください。

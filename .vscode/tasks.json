@@ -1,0 +1,89 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "iOS Build Debug",
+      "type": "shell",
+      "command": "xcodebuild",
+      "args": [
+        "-project",
+        "YamanoteRunner.xcodeproj",
+        "-scheme",
+        "YamanoteRunner",
+        "-sdk",
+        "iphonesimulator",
+        "-configuration",
+        "Debug",
+        "-derivedDataPath",
+        ".build",
+        "build"
+      ],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "iOS Test Debug",
+      "type": "shell",
+      "command": "xcodebuild",
+      "args": [
+        "-project",
+        "YamanoteRunner.xcodeproj",
+        "-scheme",
+        "YamanoteRunner",
+        "-sdk",
+        "iphonesimulator",
+        "-configuration",
+        "Debug",
+        "-derivedDataPath",
+        ".build",
+        "test"
+      ],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Boot Simulator",
+      "type": "shell",
+      "command": "xcrun simctl boot \"iPhone 16 Pro\" || true",
+      "problemMatcher": []
+    },
+    {
+      "label": "Install App",
+      "type": "shell",
+      "command": "xcrun",
+      "args": [
+        "simctl",
+        "install",
+        "booted",
+        ".build/Build/Products/Debug-iphonesimulator/YamanoteRunner.app"
+      ],
+      "dependsOn": "iOS Build Debug",
+      "problemMatcher": []
+    },
+    {
+      "label": "Launch App",
+      "type": "shell",
+      "command": "xcrun",
+      "args": [
+        "simctl",
+        "launch",
+        "booted",
+        "com.youbo0129ueno.YamanoteRunner"
+      ],
+      "dependsOn": "Install App",
+      "problemMatcher": []
+    },
+    {
+      "label": "Build and Run",
+      "dependsOn": [
+        "iOS Build Debug",
+        "Boot Simulator",
+        "Install App",
+        "Launch App"
+      ],
+      "dependsOrder": "sequence",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}
