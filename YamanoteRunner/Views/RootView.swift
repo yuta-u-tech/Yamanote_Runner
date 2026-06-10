@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @AppStorage("hasCompletedInitialSetup") private var hasCompletedInitialSetup = false
     @AppStorage("startingStation") private var startingStationName = "東京"
+    @StateObject private var healthKitAuthorizationService = HealthKitAuthorizationService()
 
     private var startingStation: YamanoteStation {
         YamanoteStation.named(startingStationName) ?? YamanoteStation.all[0]
@@ -10,11 +11,18 @@ struct RootView: View {
 
     var body: some View {
         if hasCompletedInitialSetup {
-            HomeView(
-                startingStation: startingStation,
-                onSelectStation: saveStartingStation,
-                onRestartSetup: restartSetup
-            )
+            if healthKitAuthorizationService.authorizationState == .authorized {
+                HomeView(
+                    startingStation: startingStation,
+                    onSelectStation: saveStartingStation,
+                    onRestartSetup: restartSetup
+                )
+            } else {
+                HealthPermissionView(
+                    authorizationState: healthKitAuthorizationService.authorizationState,
+                    requestAuthorization: healthKitAuthorizationService.requestAuthorization
+                )
+            }
         } else {
             InitialSetupFlowView(onComplete: completeSetup)
         }
