@@ -4,7 +4,7 @@ import SwiftUI
 struct YamanoteRunnerApp: App {
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            RootView()
         }
     }
 }
