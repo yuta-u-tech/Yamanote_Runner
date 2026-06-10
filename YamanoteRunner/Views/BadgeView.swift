@@ -1,7 +1,11 @@
 import SwiftUI
 
 struct BadgeView: View {
-    let badges = RunnerBadge.previewBadges
+    let badges: [RunnerBadge]
+
+    init(badges: [RunnerBadge] = RunnerBadge.previewBadges) {
+        self.badges = badges
+    }
 
     var body: some View {
         ScrollView {

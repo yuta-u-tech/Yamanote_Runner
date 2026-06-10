@@ -1,21 +1,14 @@
 import SwiftUI
 
 struct RootView: View {
-    @AppStorage("hasCompletedInitialSetup") private var hasCompletedInitialSetup = false
-    @AppStorage("startingStation") private var startingStationName = "東京"
+    @StateObject private var appStateStore = AppStateStore()
     @StateObject private var healthKitAuthorizationService = HealthKitAuthorizationService()
 
-    private var startingStation: YamanoteStation {
-        YamanoteStation.named(startingStationName) ?? YamanoteStation.all[0]
-    }
-
     var body: some View {
-        if hasCompletedInitialSetup {
+        if appStateStore.hasCompletedInitialSetup {
             if healthKitAuthorizationService.authorizationState == .authorized {
                 HomeView(
-                    startingStation: startingStation,
-                    onSelectStation: saveStartingStation,
-                    onRestartSetup: restartSetup
+                    appStateStore: appStateStore
                 )
             } else {
                 HealthPermissionView(
@@ -24,21 +17,8 @@ struct RootView: View {
                 )
             }
         } else {
-            InitialSetupFlowView(onComplete: completeSetup)
+            InitialSetupFlowView(onComplete: appStateStore.completeInitialSetup)
         }
-    }
-
-    private func completeSetup(with station: YamanoteStation) {
-        saveStartingStation(station)
-        hasCompletedInitialSetup = true
-    }
-
-    private func saveStartingStation(_ station: YamanoteStation) {
-        startingStationName = station.name
-    }
-
-    private func restartSetup() {
-        hasCompletedInitialSetup = false
     }
 }
 

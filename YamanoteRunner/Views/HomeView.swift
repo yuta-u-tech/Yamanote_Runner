@@ -3,14 +3,10 @@ import SwiftUI
 struct HomeView: View {
     @StateObject private var todayDistanceViewModel = TodayDistanceViewModel()
 
-    let startingStation: YamanoteStation
-    let onSelectStation: (YamanoteStation) -> Void
-    let onRestartSetup: () -> Void
+    @ObservedObject var appStateStore: AppStateStore
 
-    private let previewProgress = 0.18
-
-    private var nextStation: YamanoteStation {
-        YamanoteStation.next(after: startingStation)
+    private var routeProgress: YamanoteRouteProgress {
+        appStateStore.routeProgress
     }
 
     var body: some View {
@@ -30,20 +26,27 @@ struct HomeView: View {
                     Menu {
                         Button {
                             Task {
-                                await todayDistanceViewModel.loadTodayDistance()
+                                await refreshTodayDistance()
                             }
                         } label: {
                             Label("距離を再取得", systemImage: "arrow.clockwise")
                         }
-                        Button("初回設定をやり直す", action: onRestartSetup)
+                        Button("初回設定をやり直す", action: appStateStore.restartSetup)
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
                 }
             }
             .task {
-                await todayDistanceViewModel.loadTodayDistance()
+                await refreshTodayDistance()
             }
+        }
+    }
+
+    private func refreshTodayDistance() async {
+        await todayDistanceViewModel.loadTodayDistance()
+        if let distanceKilometers = todayDistanceViewModel.distanceKilometers {
+            appStateStore.syncTodayDistance(distanceKilometers)
         }
     }
 
@@ -112,13 +115,13 @@ struct HomeView: View {
                     Text("一周の進捗")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("18%")
+                    Text("\(routeProgress.progressInCurrentLap.formatted(.percent.precision(.fractionLength(0))))")
                         .font(.title2.weight(.bold))
                 }
 
                 Spacer()
 
-                Label("仮データ", systemImage: "hammer")
+                Label("\(routeProgress.currentLapNumber)周目", systemImage: "arrow.triangle.2.circlepath")
                     .font(.caption)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -127,7 +130,7 @@ struct HomeView: View {
                     .clipShape(Capsule())
             }
 
-            ProgressView(value: previewProgress)
+            ProgressView(value: routeProgress.progressInCurrentLap)
                 .tint(.green)
 
             HStack {
@@ -135,18 +138,38 @@ struct HomeView: View {
                     Text("開始駅")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(startingStation.name)
+                    Text(appStateStore.startingStation.name)
                         .font(.headline)
                 }
 
                 Spacer()
 
                 VStack(alignment: .trailing) {
-                    Text("次の駅")
+                    Text("現在位置")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(nextStation.name)
+                    Text("\(routeProgress.currentSegment.from.name)〜\(routeProgress.currentSegment.to.name)")
                         .font(.headline)
+                }
+            }
+
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("累計距離")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("\(appStateStore.cumulativeDistanceKilometers.formatted(.number.precision(.fractionLength(2)))) km")
+                        .font(.subheadline.weight(.semibold))
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing) {
+                    Text("次の駅まで")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("\(routeProgress.distanceToNextStationKilometers.formatted(.number.precision(.fractionLength(2)))) km")
+                        .font(.subheadline.weight(.semibold))
                 }
             }
         }
@@ -159,10 +182,10 @@ struct HomeView: View {
         VStack(spacing: 12) {
             NavigationLink {
                 StationSelectionView(
-                    selectedStation: startingStation,
+                    selectedStation: appStateStore.startingStation,
                     title: "開始駅を変更",
                     actionTitle: "変更",
-                    onSelect: onSelectStation
+                    onSelect: appStateStore.saveStartingStation
                 )
             } label: {
                 ActionRow(
@@ -173,12 +196,12 @@ struct HomeView: View {
             }
 
             NavigationLink {
-                BadgeView()
+                BadgeView(badges: RunnerBadge.all(unlockedBadgeIDs: appStateStore.unlockedBadgeIDs))
             } label: {
                 ActionRow(
                     symbol: "medal.fill",
                     title: "バッジを見る",
-                    description: "獲得済み 1 / 4"
+                    description: "獲得済み \(appStateStore.unlockedBadgeIDs.count) / 4"
                 )
             }
         }
@@ -222,8 +245,6 @@ private struct ActionRow: View {
 
 #Preview {
     HomeView(
-        startingStation: YamanoteStation.all[0],
-        onSelectStation: { _ in },
-        onRestartSetup: {}
+        appStateStore: AppStateStore(userDefaults: .standard)
     )
 }
