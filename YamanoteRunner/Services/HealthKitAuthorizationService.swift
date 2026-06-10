@@ -33,7 +33,7 @@ final class HealthKitAuthorizationService: ObservableObject {
         case .sharingAuthorized:
             authorizationState = .authorized
         case .sharingDenied:
-            authorizationState = UserDefaults.standard.bool(forKey: hasRequestedAuthorizationKey) ? .denied : .notDetermined
+            authorizationState = UserDefaults.standard.bool(forKey: hasRequestedAuthorizationKey) ? .authorized : .notDetermined
         @unknown default:
             authorizationState = .denied
         }
@@ -58,11 +58,7 @@ final class HealthKitAuthorizationService: ObservableObject {
                 read: [Self.walkingRunningDistanceType]
             )
             UserDefaults.standard.set(true, forKey: hasRequestedAuthorizationKey)
-            refreshAuthorizationState()
-
-            if authorizationState == .notDetermined {
-                authorizationState = .authorized
-            }
+            authorizationState = .authorized
         } catch {
             UserDefaults.standard.set(true, forKey: hasRequestedAuthorizationKey)
             authorizationState = .denied

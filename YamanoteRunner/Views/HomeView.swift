@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct HomeView: View {
+    @StateObject private var todayDistanceViewModel = TodayDistanceViewModel()
+
     let startingStation: YamanoteStation
     let onSelectStation: (YamanoteStation) -> Void
     let onRestartSetup: () -> Void
@@ -16,6 +18,7 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     overviewHeader
+                    todayDistanceCard
                     progressCard
                     actionLinks
                 }
@@ -25,11 +28,21 @@ struct HomeView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
+                        Button {
+                            Task {
+                                await todayDistanceViewModel.loadTodayDistance()
+                            }
+                        } label: {
+                            Label("距離を再取得", systemImage: "arrow.clockwise")
+                        }
                         Button("初回設定をやり直す", action: onRestartSetup)
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
                 }
+            }
+            .task {
+                await todayDistanceViewModel.loadTodayDistance()
             }
         }
     }
@@ -44,6 +57,52 @@ struct HomeView: View {
                 .font(.body)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private var todayDistanceCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("今日の距離")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text(todayDistanceText)
+                        .font(.title2.weight(.bold))
+                }
+
+                Spacer()
+
+                if todayDistanceViewModel.isLoading {
+                    ProgressView()
+                } else {
+                    Image(systemName: "figure.walk")
+                        .font(.title2)
+                        .foregroundStyle(.green)
+                }
+            }
+
+            if let errorMessage = todayDistanceViewModel.errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("ヘルスケアの歩行・ランニング距離を反映しています。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var todayDistanceText: String {
+        guard let distanceKilometers = todayDistanceViewModel.distanceKilometers else {
+            return todayDistanceViewModel.isLoading ? "取得中" : "-- km"
+        }
+
+        return "\(distanceKilometers.formatted(.number.precision(.fractionLength(2)))) km"
     }
 
     private var progressCard: some View {
