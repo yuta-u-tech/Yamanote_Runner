@@ -1,7 +1,7 @@
 SCHEME=YamanoteRunner
 PROJECT=YamanoteRunner.xcodeproj
 DERIVED_DATA=.build
-SIMULATOR=iPhone 16 Pro
+SIMULATOR=iPhone 17
 BUNDLE_ID=com.youbo0129ueno.YamanoteRunner
 
 .PHONY: build test boot install launch run clean
@@ -20,6 +20,7 @@ test:
 		-project $(PROJECT) \
 		-scheme $(SCHEME) \
 		-sdk iphonesimulator \
+		-destination 'platform=iOS Simulator,name=$(SIMULATOR)' \
 		-configuration Debug \
 		-derivedDataPath $(DERIVED_DATA) \
 		test

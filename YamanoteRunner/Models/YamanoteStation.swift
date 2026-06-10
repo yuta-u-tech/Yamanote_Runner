@@ -48,3 +48,131 @@ struct YamanoteStation: Identifiable, Hashable {
         return all[(index + 1) % all.count]
     }
 }
+
+struct YamanoteRouteSegment: Identifiable, Hashable {
+    let from: YamanoteStation
+    let to: YamanoteStation
+    let distanceKilometers: Double
+
+    var id: String { "\(from.id)-\(to.id)" }
+}
+
+struct YamanoteRouteProgress: Hashable {
+    let totalDistanceKilometers: Double
+    let completedLapCount: Int
+    let distanceInCurrentLapKilometers: Double
+    let currentSegment: YamanoteRouteSegment
+    let distanceFromSegmentStartKilometers: Double
+    let distanceToNextStationKilometers: Double
+    let passedStations: [YamanoteStation]
+
+    var currentLapNumber: Int {
+        completedLapCount + 1
+    }
+
+    var progressInCurrentLap: Double {
+        guard YamanoteRoute.totalDistanceKilometers > 0 else { return 0 }
+        return distanceInCurrentLapKilometers / YamanoteRoute.totalDistanceKilometers
+    }
+}
+
+enum YamanoteRoute {
+    static let segments: [YamanoteRouteSegment] = zip(stations, distancesToNextStationKilometers).map {
+        YamanoteRouteSegment(from: $0.0, to: $0.1.to, distanceKilometers: $0.1.distance)
+    }
+
+    static let totalDistanceKilometers: Double = segments.reduce(0) { $0 + $1.distanceKilometers }
+
+    static func progress(for totalDistanceKilometers: Double) -> YamanoteRouteProgress {
+        let normalizedTotalDistance = max(0, totalDistanceKilometers)
+
+        guard Self.totalDistanceKilometers > 0 else {
+            return YamanoteRouteProgress(
+                totalDistanceKilometers: normalizedTotalDistance,
+                completedLapCount: 0,
+                distanceInCurrentLapKilometers: 0,
+                currentSegment: segments[0],
+                distanceFromSegmentStartKilometers: 0,
+                distanceToNextStationKilometers: 0,
+                passedStations: []
+            )
+        }
+
+        let completedLapCount = Int(normalizedTotalDistance / Self.totalDistanceKilometers)
+        let distanceInCurrentLap = normalizedTotalDistance.truncatingRemainder(dividingBy: Self.totalDistanceKilometers)
+        let location = locate(distanceInCurrentLap)
+
+        return YamanoteRouteProgress(
+            totalDistanceKilometers: normalizedTotalDistance,
+            completedLapCount: completedLapCount,
+            distanceInCurrentLapKilometers: distanceInCurrentLap,
+            currentSegment: location.segment,
+            distanceFromSegmentStartKilometers: location.distanceFromSegmentStart,
+            distanceToNextStationKilometers: location.segment.distanceKilometers - location.distanceFromSegmentStart,
+            passedStations: Array(stations.prefix(location.segmentIndex + 1))
+        )
+    }
+
+    private static let stations: [YamanoteStation] = {
+        let stationsAfterTokyo = YamanoteStation.all.dropFirst().reversed()
+        return [YamanoteStation.all[0]] + stationsAfterTokyo
+    }()
+
+    private static let distancesToNextStationKilometers: [(to: YamanoteStation, distance: Double)] = [
+        (station("有楽町"), 0.8),
+        (station("新橋"), 1.1),
+        (station("浜松町"), 1.2),
+        (station("田町"), 1.5),
+        (station("高輪ゲートウェイ"), 1.3),
+        (station("品川"), 0.9),
+        (station("大崎"), 2.0),
+        (station("五反田"), 0.9),
+        (station("目黒"), 1.2),
+        (station("恵比寿"), 1.5),
+        (station("渋谷"), 1.6),
+        (station("原宿"), 1.2),
+        (station("代々木"), 1.5),
+        (station("新宿"), 0.7),
+        (station("新大久保"), 1.3),
+        (station("高田馬場"), 1.4),
+        (station("目白"), 0.9),
+        (station("池袋"), 1.2),
+        (station("大塚"), 1.8),
+        (station("巣鴨"), 1.1),
+        (station("駒込"), 0.7),
+        (station("田端"), 1.6),
+        (station("西日暮里"), 0.8),
+        (station("日暮里"), 0.5),
+        (station("鶯谷"), 1.1),
+        (station("上野"), 1.1),
+        (station("御徒町"), 0.6),
+        (station("秋葉原"), 1.0),
+        (station("神田"), 0.7),
+        (station("東京"), 1.3)
+    ]
+
+    private static func locate(_ distanceInCurrentLap: Double) -> (
+        segment: YamanoteRouteSegment,
+        segmentIndex: Int,
+        distanceFromSegmentStart: Double
+    ) {
+        var traversedDistance = 0.0
+
+        for (index, segment) in segments.enumerated() {
+            let segmentEndDistance = traversedDistance + segment.distanceKilometers
+            if distanceInCurrentLap < segmentEndDistance {
+                return (segment, index, distanceInCurrentLap - traversedDistance)
+            }
+            traversedDistance = segmentEndDistance
+        }
+
+        return (segments[0], 0, 0)
+    }
+
+    private static func station(_ name: String) -> YamanoteStation {
+        guard let station = YamanoteStation.named(name) else {
+            preconditionFailure("Unknown Yamanote station: \(name)")
+        }
+        return station
+    }
+}
