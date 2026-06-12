@@ -8,6 +8,7 @@ final class AppStateStore: ObservableObject {
     @Published private(set) var lastSyncDate: Date?
     @Published private(set) var lastSyncedTodayDistanceKilometers: Double
     @Published private(set) var lastAddedChallengeDistanceKilometers: Double
+    @Published private(set) var lastDistanceSyncEvent: DistanceSyncEvent?
     @Published private(set) var unlockedBadgeIDs: Set<String>
 
     private let userDefaults: UserDefaults
@@ -31,6 +32,7 @@ final class AppStateStore: ObservableObject {
         cumulativeDistanceKilometers = userDefaults.double(forKey: Key.cumulativeDistanceKilometers)
         lastSyncedTodayDistanceKilometers = userDefaults.double(forKey: Key.lastSyncedTodayDistanceKilometers)
         lastAddedChallengeDistanceKilometers = 0
+        lastDistanceSyncEvent = nil
 
         if let lastSyncDateObject = userDefaults.object(forKey: Key.lastSyncDate) as? Date {
             lastSyncDate = lastSyncDateObject
@@ -80,10 +82,16 @@ final class AppStateStore: ObservableObject {
             additionalDistance = normalizedTodayDistance
         }
 
+        let previousCumulativeDistanceKilometers = cumulativeDistanceKilometers
         cumulativeDistanceKilometers += additionalDistance
         lastSyncDate = date
         lastSyncedTodayDistanceKilometers = normalizedTodayDistance
         lastAddedChallengeDistanceKilometers = additionalDistance
+        lastDistanceSyncEvent = makeDistanceSyncEvent(
+            addedDistanceKilometers: additionalDistance,
+            previousCumulativeDistanceKilometers: previousCumulativeDistanceKilometers,
+            currentCumulativeDistanceKilometers: cumulativeDistanceKilometers
+        )
 
         userDefaults.set(cumulativeDistanceKilometers, forKey: Key.cumulativeDistanceKilometers)
         userDefaults.set(date, forKey: Key.lastSyncDate)
@@ -94,5 +102,25 @@ final class AppStateStore: ObservableObject {
         guard !unlockedBadgeIDs.contains(badgeID) else { return }
         unlockedBadgeIDs.insert(badgeID)
         userDefaults.set(Array(unlockedBadgeIDs).sorted(), forKey: Key.unlockedBadgeIDs)
+    }
+
+    private func makeDistanceSyncEvent(
+        addedDistanceKilometers: Double,
+        previousCumulativeDistanceKilometers: Double,
+        currentCumulativeDistanceKilometers: Double
+    ) -> DistanceSyncEvent {
+        let progress = routeProgress
+        let passedStations = YamanoteRoute.passedStations(
+            from: previousCumulativeDistanceKilometers,
+            to: currentCumulativeDistanceKilometers,
+            startingAt: startingStation
+        )
+
+        return DistanceSyncEvent(
+            addedDistanceKilometers: addedDistanceKilometers,
+            passedStations: passedStations,
+            nextStation: progress.currentSegment.to,
+            distanceToNextStationKilometers: progress.distanceToNextStationKilometers
+        )
     }
 }

@@ -77,6 +77,17 @@ struct YamanoteRouteProgress: Hashable {
     }
 }
 
+struct DistanceSyncEvent: Hashable {
+    let addedDistanceKilometers: Double
+    let passedStations: [YamanoteStation]
+    let nextStation: YamanoteStation
+    let distanceToNextStationKilometers: Double
+
+    var hasPassedStations: Bool {
+        !passedStations.isEmpty
+    }
+}
+
 enum YamanoteRoute {
     static let segments: [YamanoteRouteSegment] = zip(stations, distancesToNextStationKilometers).map {
         YamanoteRouteSegment(from: $0.0, to: $0.1.to, distanceKilometers: $0.1.distance)
@@ -118,6 +129,40 @@ enum YamanoteRoute {
             distanceToNextStationKilometers: location.segment.distanceKilometers - location.distanceFromSegmentStart,
             passedStations: Array(routeSegments.prefix(location.segmentIndex + 1).map(\.from))
         )
+    }
+
+    static func passedStations(
+        from previousTotalDistanceKilometers: Double,
+        to currentTotalDistanceKilometers: Double,
+        startingAt startingStation: YamanoteStation = station("東京")
+    ) -> [YamanoteStation] {
+        let previousDistance = max(0, previousTotalDistanceKilometers)
+        let currentDistance = max(0, currentTotalDistanceKilometers)
+
+        guard currentDistance > previousDistance, totalDistanceKilometers > 0 else {
+            return []
+        }
+
+        let routeSegments = segments(startingAt: startingStation)
+        let stationMilestones = milestones(for: routeSegments)
+        let firstLap = Int(previousDistance / totalDistanceKilometers)
+        let lastLap = Int(currentDistance / totalDistanceKilometers)
+        let epsilon = 0.000_001
+        var passedStations: [YamanoteStation] = []
+
+        for lap in firstLap...lastLap {
+            let lapStartDistance = Double(lap) * totalDistanceKilometers
+
+            for milestone in stationMilestones {
+                let milestoneDistance = lapStartDistance + milestone.distanceKilometers
+                if milestoneDistance > previousDistance + epsilon
+                    && milestoneDistance <= currentDistance + epsilon {
+                    passedStations.append(milestone.station)
+                }
+            }
+        }
+
+        return passedStations
     }
 
     private static let stations: [YamanoteStation] = {
@@ -164,6 +209,17 @@ enum YamanoteRoute {
         }
 
         return Array(segments[index...]) + Array(segments[..<index])
+    }
+
+    private static func milestones(for segments: [YamanoteRouteSegment]) -> [
+        (station: YamanoteStation, distanceKilometers: Double)
+    ] {
+        var distanceKilometers = 0.0
+
+        return segments.map { segment in
+            distanceKilometers += segment.distanceKilometers
+            return (segment.to, distanceKilometers)
+        }
     }
 
     private static func locate(_ distanceInCurrentLap: Double, in segments: [YamanoteRouteSegment]) -> (

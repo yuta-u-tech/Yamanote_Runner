@@ -26,6 +26,7 @@ final class YamanoteRunnerTests: XCTestCase {
 
         XCTAssertEqual(store.cumulativeDistanceKilometers, 3.5, accuracy: 0.001)
         XCTAssertEqual(store.lastAddedChallengeDistanceKilometers, 1.5, accuracy: 0.001)
+        XCTAssertEqual(store.lastDistanceSyncEvent!.addedDistanceKilometers, 1.5, accuracy: 0.001)
         XCTAssertEqual(store.lastSyncedTodayDistanceKilometers, 3.5, accuracy: 0.001)
     }
 
@@ -46,6 +47,7 @@ final class YamanoteRunnerTests: XCTestCase {
         )
         XCTAssertEqual(store.cumulativeDistanceKilometers, 3.5, accuracy: 0.001)
         XCTAssertEqual(store.lastAddedChallengeDistanceKilometers, 2.3, accuracy: 0.001)
+        XCTAssertEqual(store.lastDistanceSyncEvent!.addedDistanceKilometers, 2.3, accuracy: 0.001)
         XCTAssertEqual(store.lastSyncedTodayDistanceKilometers, 3.5, accuracy: 0.001)
     }
 
@@ -60,6 +62,7 @@ final class YamanoteRunnerTests: XCTestCase {
 
         XCTAssertEqual(store.cumulativeDistanceKilometers, 3.5, accuracy: 0.001)
         XCTAssertEqual(store.lastAddedChallengeDistanceKilometers, 0, accuracy: 0.001)
+        XCTAssertEqual(store.lastDistanceSyncEvent?.passedStations, [])
         XCTAssertEqual(store.lastSyncedTodayDistanceKilometers, 1.2, accuracy: 0.001)
     }
 
@@ -124,6 +127,33 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(progress.currentSegment.to.name, "浜松町")
         XCTAssertEqual(progress.distanceFromSegmentStartKilometers, 0.1, accuracy: 0.001)
         XCTAssertEqual(progress.passedStations.map(\.name), ["東京", "有楽町", "新橋"])
+    }
+
+    func testRoutePassedStationsBetweenDistances() {
+        let passedStations = YamanoteRoute.passedStations(from: 0, to: 2.4)
+
+        XCTAssertEqual(passedStations.map(\.name), ["有楽町", "新橋"])
+    }
+
+    func testRoutePassedStationsReturnsEmptyWhenNoStationWasPassed() {
+        let passedStations = YamanoteRoute.passedStations(from: 0, to: 0.3)
+
+        XCTAssertEqual(passedStations, [])
+    }
+
+    @MainActor
+    func testAppStateCreatesDistanceSyncEventWithPassedStationsAndNextStation() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+
+        store.syncTodayDistance(2.4, at: date)
+
+        let event = store.lastDistanceSyncEvent!
+        XCTAssertEqual(event.addedDistanceKilometers, 2.4, accuracy: 0.001)
+        XCTAssertEqual(event.passedStations.map(\.name), ["有楽町", "新橋"])
+        XCTAssertEqual(event.nextStation.name, "浜松町")
+        XCTAssertEqual(event.distanceToNextStationKilometers, 0.7, accuracy: 0.001)
     }
 
     func testRouteProgressRotatesRouteFromStartingStation() {

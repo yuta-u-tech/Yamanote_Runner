@@ -15,6 +15,7 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     overviewHeader
                     todayDistanceCard
+                    syncEventCard
                     progressCard
                     actionLinks
                 }
@@ -113,6 +114,55 @@ struct HomeView: View {
         }
 
         return formattedKilometers(distanceKilometers)
+    }
+
+    @ViewBuilder
+    private var syncEventCard: some View {
+        if let event = appStateStore.lastDistanceSyncEvent {
+            VStack(alignment: .leading, spacing: 14) {
+                Label(
+                    "+\(formattedKilometers(event.addedDistanceKilometers)) 進みました！",
+                    systemImage: event.hasPassedStations ? "party.popper.fill" : "figure.walk"
+                )
+                .font(.headline)
+                .foregroundStyle(event.hasPassedStations ? .green : .primary)
+
+                if event.hasPassedStations {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(event.passedStations) { station in
+                            Label("\(station.name)を通過！", systemImage: "checkmark.seal.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.green)
+                        }
+                    }
+                } else {
+                    Text("駅通過まで少し前進しました。")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Divider()
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("次は \(event.nextStation.name)！")
+                            .font(.subheadline.weight(.semibold))
+                        Text("あと\(formattedKilometers(event.distanceToNextStationKilometers))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "tram.fill")
+                        .font(.title3)
+                        .foregroundStyle(.green)
+                }
+            }
+            .padding()
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
     }
 
     private var progressCard: some View {
