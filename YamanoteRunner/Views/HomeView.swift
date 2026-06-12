@@ -66,7 +66,7 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("今日の距離")
+                    Text("今日の移動距離")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -94,6 +94,13 @@ struct HomeView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Divider()
+
+            MetricRow(
+                title: "今回同期で増えた距離",
+                value: "+\(formattedKilometers(appStateStore.lastAddedChallengeDistanceKilometers))"
+            )
         }
         .padding()
         .background(Color(.secondarySystemBackground))
@@ -102,26 +109,26 @@ struct HomeView: View {
 
     private var todayDistanceText: String {
         guard let distanceKilometers = todayDistanceViewModel.distanceKilometers else {
-            return todayDistanceViewModel.isLoading ? "取得中" : "-- km"
+            return todayDistanceViewModel.isLoading ? "取得中" : "--km"
         }
 
-        return "\(distanceKilometers.formatted(.number.precision(.fractionLength(2)))) km"
+        return formattedKilometers(distanceKilometers)
     }
 
     private var progressCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("一周の進捗")
+                    Text("一周達成率")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("\(routeProgress.progressInCurrentLap.formatted(.percent.precision(.fractionLength(0))))")
+                    Text(progressPercentText)
                         .font(.title2.weight(.bold))
                 }
 
                 Spacer()
 
-                Label("\(routeProgress.currentLapNumber)周目", systemImage: "arrow.triangle.2.circlepath")
+                Label("山手線 \(routeProgress.currentLapNumber)周目", systemImage: "arrow.triangle.2.circlepath")
                     .font(.caption)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -145,7 +152,7 @@ struct HomeView: View {
                 Spacer()
 
                 VStack(alignment: .trailing) {
-                    Text("現在位置")
+                    Text("現在")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text("\(routeProgress.currentSegment.from.name)〜\(routeProgress.currentSegment.to.name)")
@@ -168,7 +175,7 @@ struct HomeView: View {
                     Text("次の駅まで")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("\(routeProgress.distanceToNextStationKilometers.formatted(.number.precision(.fractionLength(2)))) km")
+                    Text("あと\(formattedKilometers(routeProgress.distanceToNextStationKilometers))")
                         .font(.subheadline.weight(.semibold))
                 }
             }
@@ -206,6 +213,32 @@ struct HomeView: View {
             }
         }
         .buttonStyle(.plain)
+    }
+
+    private var progressPercentText: String {
+        routeProgress.progressInCurrentLap.formatted(.percent.precision(.fractionLength(0)))
+    }
+
+    private func formattedKilometers(_ distanceKilometers: Double) -> String {
+        "\(distanceKilometers.formatted(.number.precision(.fractionLength(1))))km"
+    }
+}
+
+private struct MetricRow: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+        }
     }
 }
 

@@ -25,6 +25,7 @@ final class YamanoteRunnerTests: XCTestCase {
         store.syncTodayDistance(3.5, at: date.addingTimeInterval(60 * 60))
 
         XCTAssertEqual(store.cumulativeDistanceKilometers, 3.5, accuracy: 0.001)
+        XCTAssertEqual(store.lastAddedChallengeDistanceKilometers, 1.5, accuracy: 0.001)
         XCTAssertEqual(store.lastSyncedTodayDistanceKilometers, 3.5, accuracy: 0.001)
     }
 
@@ -44,6 +45,7 @@ final class YamanoteRunnerTests: XCTestCase {
             accuracy: 0.001
         )
         XCTAssertEqual(store.cumulativeDistanceKilometers, 3.5, accuracy: 0.001)
+        XCTAssertEqual(store.lastAddedChallengeDistanceKilometers, 2.3, accuracy: 0.001)
         XCTAssertEqual(store.lastSyncedTodayDistanceKilometers, 3.5, accuracy: 0.001)
     }
 
@@ -57,6 +59,7 @@ final class YamanoteRunnerTests: XCTestCase {
         store.syncTodayDistance(1.2, at: date.addingTimeInterval(60 * 60))
 
         XCTAssertEqual(store.cumulativeDistanceKilometers, 3.5, accuracy: 0.001)
+        XCTAssertEqual(store.lastAddedChallengeDistanceKilometers, 0, accuracy: 0.001)
         XCTAssertEqual(store.lastSyncedTodayDistanceKilometers, 1.2, accuracy: 0.001)
     }
 
@@ -71,6 +74,7 @@ final class YamanoteRunnerTests: XCTestCase {
         store.syncTodayDistance(1.2, at: nextDate)
 
         XCTAssertEqual(store.cumulativeDistanceKilometers, 5.2, accuracy: 0.001)
+        XCTAssertEqual(store.lastAddedChallengeDistanceKilometers, 1.2, accuracy: 0.001)
         XCTAssertEqual(store.lastSyncedTodayDistanceKilometers, 1.2, accuracy: 0.001)
     }
 

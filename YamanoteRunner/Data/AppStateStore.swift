@@ -7,6 +7,7 @@ final class AppStateStore: ObservableObject {
     @Published private(set) var cumulativeDistanceKilometers: Double
     @Published private(set) var lastSyncDate: Date?
     @Published private(set) var lastSyncedTodayDistanceKilometers: Double
+    @Published private(set) var lastAddedChallengeDistanceKilometers: Double
     @Published private(set) var unlockedBadgeIDs: Set<String>
 
     private let userDefaults: UserDefaults
@@ -29,6 +30,7 @@ final class AppStateStore: ObservableObject {
         startingStationName = userDefaults.string(forKey: Key.startingStationName) ?? "東京"
         cumulativeDistanceKilometers = userDefaults.double(forKey: Key.cumulativeDistanceKilometers)
         lastSyncedTodayDistanceKilometers = userDefaults.double(forKey: Key.lastSyncedTodayDistanceKilometers)
+        lastAddedChallengeDistanceKilometers = 0
 
         if let lastSyncDateObject = userDefaults.object(forKey: Key.lastSyncDate) as? Date {
             lastSyncDate = lastSyncDateObject
@@ -81,6 +83,7 @@ final class AppStateStore: ObservableObject {
         cumulativeDistanceKilometers += additionalDistance
         lastSyncDate = date
         lastSyncedTodayDistanceKilometers = normalizedTodayDistance
+        lastAddedChallengeDistanceKilometers = additionalDistance
 
         userDefaults.set(cumulativeDistanceKilometers, forKey: Key.cumulativeDistanceKilometers)
         userDefaults.set(date, forKey: Key.lastSyncDate)
