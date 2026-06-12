@@ -82,9 +82,15 @@ struct DistanceSyncEvent: Hashable {
     let passedStations: [YamanoteStation]
     let nextStation: YamanoteStation
     let distanceToNextStationKilometers: Double
+    let completedLapCount: Int
+    let currentLapNumber: Int
 
     var hasPassedStations: Bool {
         !passedStations.isEmpty
+    }
+
+    var didCompleteLap: Bool {
+        completedLapCount > 0
     }
 }
 
@@ -93,7 +99,7 @@ enum YamanoteRoute {
         YamanoteRouteSegment(from: $0.0, to: $0.1.to, distanceKilometers: $0.1.distance)
     }
 
-    static let totalDistanceKilometers: Double = segments.reduce(0) { $0 + $1.distanceKilometers }
+    static let totalDistanceKilometers = 34.5
 
     static func progress(
         for totalDistanceKilometers: Double,

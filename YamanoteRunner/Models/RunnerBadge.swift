@@ -8,6 +8,7 @@ struct RunnerBadge: Identifiable {
     let isUnlocked: Bool
 
     static let startBadgeID = "start-line"
+    static let fullLoopBadgeID = "full-loop"
 
     static func all(unlockedBadgeIDs: Set<String>) -> [RunnerBadge] {
         [
@@ -33,11 +34,11 @@ struct RunnerBadge: Identifiable {
                 isUnlocked: unlockedBadgeIDs.contains("half-loop")
             ),
             .init(
-                id: "full-loop",
+                id: fullLoopBadgeID,
                 title: "一周ランナー",
                 description: "山手線を一周する",
                 symbol: "medal.fill",
-                isUnlocked: unlockedBadgeIDs.contains("full-loop")
+                isUnlocked: unlockedBadgeIDs.contains(fullLoopBadgeID)
             )
         ]
     }

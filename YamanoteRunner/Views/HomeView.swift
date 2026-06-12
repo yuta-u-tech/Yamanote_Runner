@@ -127,6 +127,16 @@ struct HomeView: View {
                 .font(.headline)
                 .foregroundStyle(event.hasPassedStations ? .green : .primary)
 
+                if event.didCompleteLap {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("山手線一周達成！", systemImage: "medal.fill")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.green)
+                        Text("\(event.currentLapNumber)周目に突入しました！")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                }
+
                 if event.hasPassedStations {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(event.passedStations) { station in

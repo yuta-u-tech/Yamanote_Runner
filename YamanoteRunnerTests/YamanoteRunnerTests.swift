@@ -156,6 +156,33 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(event.distanceToNextStationKilometers, 0.7, accuracy: 0.001)
     }
 
+    func testRouteProgressCompletesLapAtThirtyFourPointFiveKilometers() {
+        let progress = YamanoteRoute.progress(for: 34.5)
+
+        XCTAssertEqual(YamanoteRoute.totalDistanceKilometers, 34.5, accuracy: 0.001)
+        XCTAssertEqual(progress.completedLapCount, 1)
+        XCTAssertEqual(progress.currentLapNumber, 2)
+        XCTAssertEqual(progress.distanceInCurrentLapKilometers, 0, accuracy: 0.001)
+        XCTAssertEqual(progress.currentSegment.from.name, "東京")
+        XCTAssertEqual(progress.currentSegment.to.name, "有楽町")
+    }
+
+    @MainActor
+    func testAppStateCreatesLapCompletionEventAndUnlocksFullLoopBadge() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+
+        store.syncTodayDistance(34.5, at: date)
+
+        let event = store.lastDistanceSyncEvent!
+        XCTAssertTrue(event.didCompleteLap)
+        XCTAssertEqual(event.completedLapCount, 1)
+        XCTAssertEqual(event.currentLapNumber, 2)
+        XCTAssertEqual(store.routeProgress.currentLapNumber, 2)
+        XCTAssertTrue(store.unlockedBadgeIDs.contains(RunnerBadge.fullLoopBadgeID))
+    }
+
     func testRouteProgressRotatesRouteFromStartingStation() {
         let progress = YamanoteRoute.progress(
             for: 1.5,
