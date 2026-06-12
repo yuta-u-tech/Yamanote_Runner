@@ -61,6 +61,7 @@ struct YamanoteRouteProgress: Hashable {
     let totalDistanceKilometers: Double
     let completedLapCount: Int
     let distanceInCurrentLapKilometers: Double
+    let startingStation: YamanoteStation
     let currentSegment: YamanoteRouteSegment
     let distanceFromSegmentStartKilometers: Double
     let distanceToNextStationKilometers: Double
@@ -83,15 +84,20 @@ enum YamanoteRoute {
 
     static let totalDistanceKilometers: Double = segments.reduce(0) { $0 + $1.distanceKilometers }
 
-    static func progress(for totalDistanceKilometers: Double) -> YamanoteRouteProgress {
+    static func progress(
+        for totalDistanceKilometers: Double,
+        startingAt startingStation: YamanoteStation = station("東京")
+    ) -> YamanoteRouteProgress {
         let normalizedTotalDistance = max(0, totalDistanceKilometers)
+        let routeSegments = segments(startingAt: startingStation)
 
         guard Self.totalDistanceKilometers > 0 else {
             return YamanoteRouteProgress(
                 totalDistanceKilometers: normalizedTotalDistance,
                 completedLapCount: 0,
                 distanceInCurrentLapKilometers: 0,
-                currentSegment: segments[0],
+                startingStation: startingStation,
+                currentSegment: routeSegments[0],
                 distanceFromSegmentStartKilometers: 0,
                 distanceToNextStationKilometers: 0,
                 passedStations: []
@@ -100,16 +106,17 @@ enum YamanoteRoute {
 
         let completedLapCount = Int(normalizedTotalDistance / Self.totalDistanceKilometers)
         let distanceInCurrentLap = normalizedTotalDistance.truncatingRemainder(dividingBy: Self.totalDistanceKilometers)
-        let location = locate(distanceInCurrentLap)
+        let location = locate(distanceInCurrentLap, in: routeSegments)
 
         return YamanoteRouteProgress(
             totalDistanceKilometers: normalizedTotalDistance,
             completedLapCount: completedLapCount,
             distanceInCurrentLapKilometers: distanceInCurrentLap,
+            startingStation: startingStation,
             currentSegment: location.segment,
             distanceFromSegmentStartKilometers: location.distanceFromSegmentStart,
             distanceToNextStationKilometers: location.segment.distanceKilometers - location.distanceFromSegmentStart,
-            passedStations: Array(stations.prefix(location.segmentIndex + 1))
+            passedStations: Array(routeSegments.prefix(location.segmentIndex + 1).map(\.from))
         )
     }
 
@@ -151,7 +158,15 @@ enum YamanoteRoute {
         (station("東京"), 1.3)
     ]
 
-    private static func locate(_ distanceInCurrentLap: Double) -> (
+    private static func segments(startingAt station: YamanoteStation) -> [YamanoteRouteSegment] {
+        guard let index = segments.firstIndex(where: { $0.from == station }) else {
+            return segments
+        }
+
+        return Array(segments[index...]) + Array(segments[..<index])
+    }
+
+    private static func locate(_ distanceInCurrentLap: Double, in segments: [YamanoteRouteSegment]) -> (
         segment: YamanoteRouteSegment,
         segmentIndex: Int,
         distanceFromSegmentStart: Double

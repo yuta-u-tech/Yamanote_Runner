@@ -45,7 +45,10 @@ final class AppStateStore: ObservableObject {
     }
 
     var routeProgress: YamanoteRouteProgress {
-        YamanoteRoute.progress(for: cumulativeDistanceKilometers)
+        YamanoteRoute.progress(
+            for: cumulativeDistanceKilometers,
+            startingAt: startingStation
+        )
     }
 
     func completeInitialSetup(with station: YamanoteStation) {

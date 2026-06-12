@@ -9,6 +9,21 @@ struct StationSelectionView: View {
     let actionTitle: String
     let onSelect: (YamanoteStation) -> Void
 
+    private let majorStationNames = [
+        "東京",
+        "新宿",
+        "渋谷",
+        "池袋",
+        "品川",
+        "上野"
+    ]
+
+    private var majorStations: [YamanoteStation] {
+        YamanoteStation.all.filter {
+            majorStationNames.contains($0.name)
+        }
+    }
+
     private var stations: [YamanoteStation] {
         if searchText.isEmpty {
             return YamanoteStation.all
@@ -21,34 +36,37 @@ struct StationSelectionView: View {
     }
 
     var body: some View {
-        List(stations) { station in
-            Button {
-                onSelect(station)
-                dismiss()
-            } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(station.name)
-                            .font(.body.weight(.medium))
-                        Text(station.neighborhood)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+        List {
+            if searchText.isEmpty {
+                Section("主要駅") {
+                    ForEach(majorStations) { station in
+                        stationButton(station)
                     }
+                }
 
-                    Spacer()
+                Section("ランダム") {
+                    Button {
+                        if let station = YamanoteStation.all.randomElement() {
+                            onSelect(station)
+                            dismiss()
+                        }
+                    } label: {
+                        Label("ランダムで選択", systemImage: "shuffle")
+                    }
+                }
 
-                    if station == selectedStation {
-                        Label("設定中", systemImage: "checkmark.circle.fill")
-                            .labelStyle(.iconOnly)
-                            .foregroundStyle(.green)
-                    } else {
-                        Text(actionTitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                Section("全駅") {
+                    ForEach(YamanoteStation.all) { station in
+                        stationButton(station)
+                    }
+                }
+            } else {
+                Section("検索結果") {
+                    ForEach(stations) { station in
+                        stationButton(station)
                     }
                 }
             }
-            .buttonStyle(.plain)
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
@@ -58,6 +76,36 @@ struct StationSelectionView: View {
                 ContentUnavailableView.search(text: searchText)
             }
         }
+    }
+
+    private func stationButton(_ station: YamanoteStation) -> some View {
+        Button {
+            onSelect(station)
+            dismiss()
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(station.name)
+                        .font(.body.weight(.medium))
+                    Text(station.neighborhood)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if station == selectedStation {
+                    Label("設定中", systemImage: "checkmark.circle.fill")
+                        .labelStyle(.iconOnly)
+                        .foregroundStyle(.green)
+                } else {
+                    Text(actionTitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 
