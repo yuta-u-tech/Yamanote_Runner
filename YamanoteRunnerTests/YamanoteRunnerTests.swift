@@ -29,6 +29,38 @@ final class YamanoteRunnerTests: XCTestCase {
     }
 
     @MainActor
+    func testAppStateAddsOnlyPositiveDifferenceFromLastSyncedTodayDistance() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+
+        store.syncTodayDistance(1.2, at: date)
+        let cumulativeDistanceBeforeSecondSync = store.cumulativeDistanceKilometers
+        store.syncTodayDistance(3.5, at: date.addingTimeInterval(60 * 60))
+
+        XCTAssertEqual(
+            store.cumulativeDistanceKilometers - cumulativeDistanceBeforeSecondSync,
+            2.3,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(store.cumulativeDistanceKilometers, 3.5, accuracy: 0.001)
+        XCTAssertEqual(store.lastSyncedTodayDistanceKilometers, 3.5, accuracy: 0.001)
+    }
+
+    @MainActor
+    func testAppStateDoesNotSubtractWhenTodayDistanceDecreases() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+
+        store.syncTodayDistance(3.5, at: date)
+        store.syncTodayDistance(1.2, at: date.addingTimeInterval(60 * 60))
+
+        XCTAssertEqual(store.cumulativeDistanceKilometers, 3.5, accuracy: 0.001)
+        XCTAssertEqual(store.lastSyncedTodayDistanceKilometers, 1.2, accuracy: 0.001)
+    }
+
+    @MainActor
     func testAppStateStartsNewSyncDeltaOnNextDay() {
         let userDefaults = makeIsolatedUserDefaults()
         let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
@@ -40,6 +72,21 @@ final class YamanoteRunnerTests: XCTestCase {
 
         XCTAssertEqual(store.cumulativeDistanceKilometers, 5.2, accuracy: 0.001)
         XCTAssertEqual(store.lastSyncedTodayDistanceKilometers, 1.2, accuracy: 0.001)
+    }
+
+    @MainActor
+    func testAppStatePersistsDistanceSyncState() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+
+        store.syncTodayDistance(1.2, at: date)
+
+        let restoredStore = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        restoredStore.syncTodayDistance(3.5, at: date.addingTimeInterval(60 * 60))
+
+        XCTAssertEqual(restoredStore.cumulativeDistanceKilometers, 3.5, accuracy: 0.001)
+        XCTAssertEqual(restoredStore.lastSyncedTodayDistanceKilometers, 3.5, accuracy: 0.001)
     }
 
     func testRouteProgressStartsBetweenTokyoAndYurakucho() {
