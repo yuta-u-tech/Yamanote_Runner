@@ -15,10 +15,23 @@ struct HomeView: View {
                 progressDashboard
                 currentLocationPanel
                 actionLinks
+                Spacer(minLength: 0)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .padding(.bottom, 14)
+            .padding(.top, 2)
+            .padding(.bottom, 10)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color.green.opacity(0.12),
+                        Color(.systemBackground),
+                        Color(.systemBackground)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -51,16 +64,16 @@ struct HomeView: View {
     }
 
     private var progressDashboard: some View {
-        VStack(spacing: 14) {
-            HStack(alignment: .center, spacing: 18) {
+        VStack(spacing: 12) {
+            HStack(alignment: .center, spacing: 16) {
                 ProgressRing(
                     progress: routeProgress.progressInCurrentLap,
                     label: progressPercentText,
                     caption: "\(routeProgress.currentLapNumber)周目"
                 )
-                .frame(width: 146, height: 146)
+                .frame(width: 136, height: 136)
 
-                VStack(spacing: 10) {
+                VStack(spacing: 8) {
                     MetricTile(
                         title: "今日",
                         value: todayDistanceText,
@@ -88,9 +101,13 @@ struct HomeView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding(14)
-        .background(Color(.secondarySystemBackground))
+        .padding(12)
+        .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(.green.opacity(0.12), lineWidth: 1)
+        }
     }
 
     private var currentLocationPanel: some View {
@@ -127,9 +144,13 @@ struct HomeView: View {
                 SyncEventSummary(event: event, formattedKilometers: formattedKilometers)
             }
         }
-        .padding(14)
-        .background(Color(.secondarySystemBackground))
+        .padding(12)
+        .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(.green.opacity(0.12), lineWidth: 1)
+        }
     }
 
     private var actionLinks: some View {
@@ -179,19 +200,23 @@ private struct ProgressRing: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(.green.opacity(0.16), lineWidth: 14)
+                .stroke(.green.opacity(0.14), lineWidth: 13)
 
             Circle()
                 .trim(from: 0, to: min(max(progress, 0), 1))
                 .stroke(
-                    .green,
-                    style: StrokeStyle(lineWidth: 14, lineCap: .round)
+                    LinearGradient(
+                        colors: [.green, .mint],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    style: StrokeStyle(lineWidth: 13, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
 
             VStack(spacing: 4) {
                 Text(label)
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
                     .monospacedDigit()
                 Text(caption)
                     .font(.caption.weight(.semibold))
@@ -229,6 +254,9 @@ private struct MetricTile: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, minHeight: 38)
+        .padding(.horizontal, 8)
+        .background(.green.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -287,9 +315,13 @@ private struct CompactActionButton: View {
         }
         .padding(.horizontal, 12)
         .frame(maxWidth: .infinity, minHeight: 48)
-        .background(Color(.secondarySystemBackground))
+        .background(.regularMaterial)
         .foregroundStyle(.primary)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(.green.opacity(0.12), lineWidth: 1)
+        }
     }
 }
 

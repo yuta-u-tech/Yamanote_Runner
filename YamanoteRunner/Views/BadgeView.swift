@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct BadgeView: View {
-    @Environment(\.dismiss) private var dismiss
     @State private var selectedBadge: RunnerBadge?
 
     private let badges: [RunnerBadge]
@@ -36,15 +35,6 @@ struct BadgeView: View {
         }
         .navigationTitle("バッジ")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    Label("戻る", systemImage: "chevron.left")
-                }
-            }
-        }
         .sheet(item: $selectedBadge) { badge in
             BadgeDetailView(badge: badge)
         }
