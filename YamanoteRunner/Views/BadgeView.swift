@@ -12,9 +12,13 @@ struct BadgeView: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
                 ForEach(badges) { badge in
                     VStack(alignment: .leading, spacing: 10) {
-                        Image(systemName: badge.symbol)
-                            .font(.title)
-                            .foregroundStyle(badge.isUnlocked ? .green : .secondary)
+                        Image(badge.imageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 58, height: 58)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .saturation(badge.isUnlocked ? 1 : 0)
+                            .opacity(badge.isUnlocked ? 1 : 0.45)
 
                         Text(badge.title)
                             .font(.headline)
