@@ -46,11 +46,7 @@ private struct BadgeCard: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Image(badge.imageName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 86, height: 86)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+            BadgeArtworkImage(imageName: badge.imageName, size: 94, cornerRadius: 18)
 
             Text(badge.title)
                 .font(.headline)
@@ -76,11 +72,7 @@ private struct BadgeDetailView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 22) {
-                Image(badge.imageName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: 240, maxHeight: 240)
-                    .clipShape(RoundedRectangle(cornerRadius: 28))
+                BadgeArtworkImage(imageName: badge.imageName, size: 260, cornerRadius: 30)
                     .shadow(color: .black.opacity(0.14), radius: 18, y: 8)
 
                 VStack(spacing: 8) {
@@ -109,6 +101,22 @@ private struct BadgeDetailView: View {
                 }
             }
         }
+    }
+}
+
+private struct BadgeArtworkImage: View {
+    let imageName: String
+    let size: CGFloat
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        Image(imageName)
+            .resizable()
+            .scaledToFill()
+            .scaleEffect(1.12)
+            .frame(width: size, height: size)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 }
 
