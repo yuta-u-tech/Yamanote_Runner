@@ -132,6 +132,11 @@ struct HomeView: View {
                 }
             }
 
+            MetricRow(
+                title: "進行方向",
+                value: appStateStore.selectedDirection.rawValue
+            )
+
             HStack(spacing: 8) {
                 Label(appStateStore.startingStation.name, systemImage: "tram.fill")
                 Spacer()
@@ -164,6 +169,19 @@ struct HomeView: View {
                 )
             } label: {
                 CompactActionButton(symbol: "tram.fill", title: "開始駅")
+            }
+
+            NavigationLink {
+                DirectionSelectionView(
+                    appStateStore: appStateStore,
+                    title: "進行方向を変更"
+                )
+            } label: {
+                ActionRow(
+                    symbol: "arrow.triangle.2.circlepath",
+                    title: "進行方向を変更",
+                    description: appStateStore.selectedDirection.rawValue
+                )
             }
 
             NavigationLink {

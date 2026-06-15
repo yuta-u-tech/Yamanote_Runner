@@ -17,7 +17,10 @@ struct RootView: View {
                 )
             }
         } else {
-            InitialSetupFlowView(onComplete: appStateStore.completeInitialSetup)
+            InitialSetupFlowView(
+                appStateStore: appStateStore,
+                onComplete: appStateStore.completeInitialSetup
+            )
         }
     }
 }

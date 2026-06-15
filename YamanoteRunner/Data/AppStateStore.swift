@@ -4,6 +4,7 @@ import Foundation
 final class AppStateStore: ObservableObject {
     @Published private(set) var hasCompletedInitialSetup: Bool
     @Published private(set) var startingStationName: String
+    @Published private(set) var selectedDirection: YamanoteRouteDirection
     @Published private(set) var cumulativeDistanceKilometers: Double
     @Published private(set) var lastSyncDate: Date?
     @Published private(set) var lastSyncedTodayDistanceKilometers: Double
@@ -17,6 +18,7 @@ final class AppStateStore: ObservableObject {
     private enum Key {
         static let hasCompletedInitialSetup = "hasCompletedInitialSetup"
         static let startingStationName = "startingStation"
+        static let selectedDirection = "selectedDirection"
         static let cumulativeDistanceKilometers = "cumulativeDistanceKilometers"
         static let lastSyncDate = "lastSyncDate"
         static let lastSyncedTodayDistanceKilometers = "lastSyncedTodayDistanceKilometers"
@@ -29,6 +31,13 @@ final class AppStateStore: ObservableObject {
 
         hasCompletedInitialSetup = userDefaults.bool(forKey: Key.hasCompletedInitialSetup)
         startingStationName = userDefaults.string(forKey: Key.startingStationName) ?? "東京"
+        if let selectedDirectionName = userDefaults.string(forKey: Key.selectedDirection),
+            let restoredDirection = YamanoteRouteDirection(rawValue: selectedDirectionName)
+        {
+            selectedDirection = restoredDirection
+        } else {
+            selectedDirection = .inner
+        }
         cumulativeDistanceKilometers = userDefaults.double(forKey: Key.cumulativeDistanceKilometers)
         lastSyncedTodayDistanceKilometers = userDefaults.double(forKey: Key.lastSyncedTodayDistanceKilometers)
         lastAddedChallengeDistanceKilometers = 0
@@ -51,7 +60,8 @@ final class AppStateStore: ObservableObject {
     var routeProgress: YamanoteRouteProgress {
         YamanoteRoute.progress(
             for: cumulativeDistanceKilometers,
-            startingAt: startingStation
+            startingAt: startingStation,
+            direction: selectedDirection
         )
     }
 
@@ -65,6 +75,11 @@ final class AppStateStore: ObservableObject {
     func saveStartingStation(_ station: YamanoteStation) {
         startingStationName = station.name
         userDefaults.set(station.name, forKey: Key.startingStationName)
+    }
+
+    func saveSelectedDirection(_ direction: YamanoteRouteDirection) {
+        selectedDirection = direction
+        userDefaults.set(direction.rawValue, forKey: Key.selectedDirection)
     }
 
     func restartSetup() {
@@ -115,12 +130,14 @@ final class AppStateStore: ObservableObject {
         let progress = routeProgress
         let previousProgress = YamanoteRoute.progress(
             for: previousCumulativeDistanceKilometers,
-            startingAt: startingStation
+            startingAt: startingStation,
+            direction: selectedDirection
         )
         let passedStations = YamanoteRoute.passedStations(
             from: previousCumulativeDistanceKilometers,
             to: currentCumulativeDistanceKilometers,
-            startingAt: startingStation
+            startingAt: startingStation,
+            direction: selectedDirection
         )
 
         return DistanceSyncEvent(
