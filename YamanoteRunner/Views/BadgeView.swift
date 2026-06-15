@@ -66,31 +66,37 @@ private struct BadgeCard: View {
 
 private struct BadgeDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     let badge: RunnerBadge
+    private var artworkSize: CGFloat {
+        verticalSizeClass == .compact ? 160 : 260
+    }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 22) {
-                BadgeArtworkImage(imageName: badge.imageName, size: 260, cornerRadius: 30)
-                    .shadow(color: .black.opacity(0.14), radius: 18, y: 8)
+            ScrollView {
+                VStack(spacing: 22) {
+                    BadgeArtworkImage(imageName: badge.imageName, size: artworkSize, cornerRadius: 30)
+                        .shadow(color: .black.opacity(0.14), radius: 18, y: 8)
 
-                VStack(spacing: 8) {
-                    Text(badge.title)
-                        .font(.title2.weight(.bold))
-                    Text(badge.description)
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                    VStack(spacing: 8) {
+                        Text(badge.title)
+                            .font(.title2.weight(.bold))
+                            .multilineTextAlignment(.center)
+                        Text(badge.description)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    Label("獲得済み", systemImage: "checkmark.seal.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.green)
                 }
-
-                Label("獲得済み", systemImage: "checkmark.seal.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.green)
-
-                Spacer()
+                .frame(maxWidth: .infinity)
+                .padding(24)
             }
-            .padding(24)
             .navigationTitle("バッジ詳細")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

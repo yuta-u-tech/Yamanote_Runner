@@ -294,6 +294,52 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(store.routeProgress.currentSegment.to.name, "代々木")
     }
 
+    @MainActor
+    func testAppStatePersistsValidHeight() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults)
+
+        XCTAssertTrue(store.saveHeightCentimeters(170.45))
+
+        let restoredStore = AppStateStore(userDefaults: userDefaults)
+        XCTAssertEqual(restoredStore.heightCentimeters!, 170.5, accuracy: 0.001)
+    }
+
+    @MainActor
+    func testAppStateRejectsInvalidHeightWithoutOverwritingSavedValue() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults)
+
+        XCTAssertTrue(store.saveHeightCentimeters(170))
+        XCTAssertFalse(store.saveHeightCentimeters(90))
+
+        XCTAssertEqual(store.heightCentimeters!, 170, accuracy: 0.001)
+    }
+
+    @MainActor
+    func testAppStateCanClearHeight() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults)
+
+        XCTAssertTrue(store.saveHeightCentimeters(170))
+        XCTAssertTrue(store.saveHeightCentimeters(nil))
+
+        let restoredStore = AppStateStore(userDefaults: userDefaults)
+        XCTAssertNil(restoredStore.heightCentimeters)
+    }
+
+    @MainActor
+    func testAppStateTracksDistanceRefreshState() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults)
+
+        store.beginDistanceRefresh()
+        XCTAssertEqual(store.distanceRefreshState, .loading)
+
+        store.failDistanceRefresh(message: "error")
+        XCTAssertEqual(store.distanceRefreshState, .failed(message: "error"))
+    }
+
     func testRouteProgressClampsNegativeDistanceToStart() {
         let progress = YamanoteRoute.progress(for: -5.0)
 
