@@ -220,6 +220,11 @@ struct HomeView: View {
                 }
             }
 
+            MetricRow(
+                title: "進行方向",
+                value: appStateStore.selectedDirection.rawValue
+            )
+
             HStack {
                 VStack(alignment: .leading) {
                     Text("累計距離")
@@ -259,6 +264,19 @@ struct HomeView: View {
                     symbol: "tram.fill",
                     title: "開始駅を変更",
                     description: "全30駅から選択"
+                )
+            }
+
+            NavigationLink {
+                DirectionSelectionView(
+                    appStateStore: appStateStore,
+                    title: "進行方向を変更"
+                )
+            } label: {
+                ActionRow(
+                    symbol: "arrow.triangle.2.circlepath",
+                    title: "進行方向を変更",
+                    description: appStateStore.selectedDirection.rawValue
                 )
             }
 

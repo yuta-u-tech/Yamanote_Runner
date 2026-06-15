@@ -16,6 +16,38 @@ final class YamanoteRunnerTests: XCTestCase {
     }
 
     @MainActor
+    func testAppStatePersistsSelectedDirectionAndUsesItForRouteProgress() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+
+        store.saveSelectedDirection(.outer)
+        store.syncTodayDistance(2.4, at: date)
+
+        let event = store.lastDistanceSyncEvent!
+        XCTAssertEqual(event.passedStations.map(\.name), ["神田", "秋葉原"])
+        XCTAssertEqual(event.nextStation.name, "御徒町")
+        XCTAssertEqual(event.distanceToNextStationKilometers, 0.2, accuracy: 0.001)
+
+        let restoredStore = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        XCTAssertEqual(restoredStore.selectedDirection, .outer)
+        XCTAssertEqual(restoredStore.routeProgress.currentSegment.from.name, "東京")
+        XCTAssertEqual(restoredStore.routeProgress.currentSegment.to.name, "神田")
+    }
+
+    @MainActor
+    func testAppStateChangingStartingStationPreservesSelectedDirection() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults)
+
+        store.saveSelectedDirection(.outer)
+        store.saveStartingStation(YamanoteStation.named("新宿")!)
+
+        XCTAssertEqual(store.selectedDirection, .outer)
+        XCTAssertEqual(store.startingStationName, "新宿")
+    }
+
+    @MainActor
     func testAppStateAddsOnlySameDayDistanceDelta() {
         let userDefaults = makeIsolatedUserDefaults()
         let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
@@ -129,6 +161,25 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(progress.passedStations.map(\.name), ["東京", "有楽町", "新橋"])
     }
 
+    func testRouteProgressSupportsOuterDirection() {
+        let progress = YamanoteRoute.progress(for: 0.3, direction: .outer)
+
+        XCTAssertEqual(progress.completedLapCount, 0)
+        XCTAssertEqual(progress.currentLapNumber, 1)
+        XCTAssertEqual(progress.startingStation.name, "東京")
+        XCTAssertEqual(progress.currentSegment.from.name, "東京")
+        XCTAssertEqual(progress.currentSegment.to.name, "神田")
+        XCTAssertEqual(progress.distanceFromSegmentStartKilometers, 0.3, accuracy: 0.001)
+        XCTAssertEqual(progress.distanceToNextStationKilometers, 1.0, accuracy: 0.001)
+        XCTAssertEqual(progress.passedStations.map(\.name), ["東京"])
+    }
+
+    func testRoutePassedStationsUsesOuterDirection() {
+        let passedStations = YamanoteRoute.passedStations(from: 0, to: 2.4, direction: .outer)
+
+        XCTAssertEqual(passedStations.map(\.name), ["神田", "秋葉原"])
+    }
+
     func testRoutePassedStationsBetweenDistances() {
         let passedStations = YamanoteRoute.passedStations(from: 0, to: 2.4)
 
@@ -165,6 +216,17 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(progress.distanceInCurrentLapKilometers, 0, accuracy: 0.001)
         XCTAssertEqual(progress.currentSegment.from.name, "東京")
         XCTAssertEqual(progress.currentSegment.to.name, "有楽町")
+    }
+
+    func testRouteProgressCompletesLapInOuterDirection() {
+        let progress = YamanoteRoute.progress(for: 34.5 + 0.4, direction: .outer)
+
+        XCTAssertEqual(progress.completedLapCount, 1)
+        XCTAssertEqual(progress.currentLapNumber, 2)
+        XCTAssertEqual(progress.distanceInCurrentLapKilometers, 0.4, accuracy: 0.001)
+        XCTAssertEqual(progress.currentSegment.from.name, "東京")
+        XCTAssertEqual(progress.currentSegment.to.name, "神田")
+        XCTAssertEqual(progress.distanceToNextStationKilometers, 0.9, accuracy: 0.001)
     }
 
     @MainActor

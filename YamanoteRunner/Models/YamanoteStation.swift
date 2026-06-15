@@ -94,19 +94,29 @@ struct DistanceSyncEvent: Hashable {
     }
 }
 
+enum YamanoteRouteDirection: String, Hashable {
+    case inner = "内回り"
+    case outer = "外回り"
+}
+
 enum YamanoteRoute {
     static let segments: [YamanoteRouteSegment] = zip(stations, distancesToNextStationKilometers).map {
         YamanoteRouteSegment(from: $0.0, to: $0.1.to, distanceKilometers: $0.1.distance)
+    }
+
+    static let reverseSegments: [YamanoteRouteSegment] = segments.reversed().map {
+        YamanoteRouteSegment(from: $0.to, to: $0.from, distanceKilometers: $0.distanceKilometers)
     }
 
     static let totalDistanceKilometers = 34.5
 
     static func progress(
         for totalDistanceKilometers: Double,
-        startingAt startingStation: YamanoteStation = station("東京")
+        startingAt startingStation: YamanoteStation = station("東京"),
+        direction: YamanoteRouteDirection = .inner
     ) -> YamanoteRouteProgress {
         let normalizedTotalDistance = max(0, totalDistanceKilometers)
-        let routeSegments = segments(startingAt: startingStation)
+        let routeSegments = routeSegments(startingAt: startingStation, direction: direction)
 
         guard Self.totalDistanceKilometers > 0 else {
             return YamanoteRouteProgress(
@@ -140,7 +150,8 @@ enum YamanoteRoute {
     static func passedStations(
         from previousTotalDistanceKilometers: Double,
         to currentTotalDistanceKilometers: Double,
-        startingAt startingStation: YamanoteStation = station("東京")
+        startingAt startingStation: YamanoteStation = station("東京"),
+        direction: YamanoteRouteDirection = .inner
     ) -> [YamanoteStation] {
         let previousDistance = max(0, previousTotalDistanceKilometers)
         let currentDistance = max(0, currentTotalDistanceKilometers)
@@ -149,7 +160,7 @@ enum YamanoteRoute {
             return []
         }
 
-        let routeSegments = segments(startingAt: startingStation)
+        let routeSegments = routeSegments(startingAt: startingStation, direction: direction)
         let stationMilestones = milestones(for: routeSegments)
         let firstLap = Int(previousDistance / totalDistanceKilometers)
         let lastLap = Int(currentDistance / totalDistanceKilometers)
@@ -209,12 +220,25 @@ enum YamanoteRoute {
         (station("東京"), 1.3)
     ]
 
-    private static func segments(startingAt station: YamanoteStation) -> [YamanoteRouteSegment] {
-        guard let index = segments.firstIndex(where: { $0.from == station }) else {
-            return segments
+    private static func routeSegments(
+        startingAt station: YamanoteStation,
+        direction: YamanoteRouteDirection
+    ) -> [YamanoteRouteSegment] {
+        let allSegments = segments(for: direction)
+        guard let index = allSegments.firstIndex(where: { $0.from == station }) else {
+            return allSegments
         }
 
-        return Array(segments[index...]) + Array(segments[..<index])
+        return Array(allSegments[index...]) + Array(allSegments[..<index])
+    }
+
+    private static func segments(for direction: YamanoteRouteDirection) -> [YamanoteRouteSegment] {
+        switch direction {
+        case .inner:
+            return segments
+        case .outer:
+            return reverseSegments
+        }
     }
 
     private static func milestones(for segments: [YamanoteRouteSegment]) -> [

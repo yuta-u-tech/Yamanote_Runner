@@ -1,16 +1,21 @@
 import SwiftUI
 
 struct InitialSetupFlowView: View {
+    let appStateStore: AppStateStore
     let onComplete: (YamanoteStation) -> Void
 
     var body: some View {
         NavigationStack {
-            InitialSetupView(onComplete: onComplete)
+            InitialSetupView(
+                appStateStore: appStateStore,
+                onComplete: onComplete
+            )
         }
     }
 }
 
 struct InitialSetupView: View {
+    @ObservedObject var appStateStore: AppStateStore
     let onComplete: (YamanoteStation) -> Void
 
     var body: some View {
@@ -36,6 +41,12 @@ struct InitialSetupView: View {
                 FeatureRow(symbol: "medal", text: "駅の通過とバッジ獲得を記録")
             }
 
+            NavigationLink {
+                DirectionSelectionView(appStateStore: appStateStore, title: "進行方向を選択")
+            } label: {
+                DirectionRow(direction: appStateStore.selectedDirection)
+            }
+
             Spacer()
 
             NavigationLink {
@@ -58,6 +69,38 @@ struct InitialSetupView: View {
     }
 }
 
+private struct DirectionRow: View {
+    let direction: YamanoteRouteDirection
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.title3)
+                .frame(width: 42, height: 42)
+                .background(.green.opacity(0.12))
+                .foregroundStyle(.green)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("進行方向")
+                    .font(.headline)
+                Text(direction.rawValue)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+        }
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
 private struct FeatureRow: View {
     let symbol: String
     let text: String
@@ -74,5 +117,5 @@ private struct FeatureRow: View {
 }
 
 #Preview {
-    InitialSetupFlowView { _ in }
+    InitialSetupFlowView(appStateStore: AppStateStore()) { _ in }
 }
