@@ -1,24 +1,42 @@
 import Foundation
 
+enum DistanceRefreshState: Equatable {
+    case idle
+    case loading
+    case succeeded(date: Date)
+    case failed(message: String)
+
+    var isLoading: Bool {
+        if case .loading = self {
+            return true
+        }
+        return false
+    }
+}
+
 @MainActor
 final class AppStateStore: ObservableObject {
     @Published private(set) var hasCompletedInitialSetup: Bool
     @Published private(set) var startingStationName: String
     @Published private(set) var selectedDirection: YamanoteRouteDirection
+    @Published private(set) var heightCentimeters: Double?
     @Published private(set) var cumulativeDistanceKilometers: Double
     @Published private(set) var lastSyncDate: Date?
     @Published private(set) var lastSyncedTodayDistanceKilometers: Double
     @Published private(set) var lastAddedChallengeDistanceKilometers: Double
     @Published private(set) var lastDistanceSyncEvent: DistanceSyncEvent?
+    @Published private(set) var distanceRefreshState: DistanceRefreshState
     @Published private(set) var unlockedBadgeIDs: Set<String>
 
     private let userDefaults: UserDefaults
     private let calendar: Calendar
+    static let heightRangeCentimeters: ClosedRange<Double> = 100...230
 
     private enum Key {
         static let hasCompletedInitialSetup = "hasCompletedInitialSetup"
         static let startingStationName = "startingStation"
         static let selectedDirection = "selectedDirection"
+        static let heightCentimeters = "heightCentimeters"
         static let cumulativeDistanceKilometers = "cumulativeDistanceKilometers"
         static let lastSyncDate = "lastSyncDate"
         static let lastSyncedTodayDistanceKilometers = "lastSyncedTodayDistanceKilometers"
@@ -38,10 +56,17 @@ final class AppStateStore: ObservableObject {
         } else {
             selectedDirection = .inner
         }
+        if userDefaults.object(forKey: Key.heightCentimeters) == nil {
+            heightCentimeters = nil
+        } else {
+            let restoredHeight = userDefaults.double(forKey: Key.heightCentimeters)
+            heightCentimeters = Self.heightRangeCentimeters.contains(restoredHeight) ? restoredHeight : nil
+        }
         cumulativeDistanceKilometers = userDefaults.double(forKey: Key.cumulativeDistanceKilometers)
         lastSyncedTodayDistanceKilometers = userDefaults.double(forKey: Key.lastSyncedTodayDistanceKilometers)
         lastAddedChallengeDistanceKilometers = 0
         lastDistanceSyncEvent = nil
+        distanceRefreshState = .idle
 
         if let lastSyncDateObject = userDefaults.object(forKey: Key.lastSyncDate) as? Date {
             lastSyncDate = lastSyncDateObject
@@ -82,9 +107,30 @@ final class AppStateStore: ObservableObject {
         userDefaults.set(direction.rawValue, forKey: Key.selectedDirection)
     }
 
+    func saveHeightCentimeters(_ heightCentimeters: Double?) -> Bool {
+        guard let heightCentimeters else {
+            self.heightCentimeters = nil
+            userDefaults.removeObject(forKey: Key.heightCentimeters)
+            return true
+        }
+
+        guard Self.heightRangeCentimeters.contains(heightCentimeters) else {
+            return false
+        }
+
+        let roundedHeight = (heightCentimeters * 10).rounded() / 10
+        self.heightCentimeters = roundedHeight
+        userDefaults.set(roundedHeight, forKey: Key.heightCentimeters)
+        return true
+    }
+
     func restartSetup() {
         hasCompletedInitialSetup = false
         userDefaults.set(false, forKey: Key.hasCompletedInitialSetup)
+    }
+
+    func beginDistanceRefresh() {
+        distanceRefreshState = .loading
     }
 
     func syncTodayDistance(_ todayDistanceKilometers: Double, at date: Date = Date()) {
@@ -112,6 +158,11 @@ final class AppStateStore: ObservableObject {
         userDefaults.set(cumulativeDistanceKilometers, forKey: Key.cumulativeDistanceKilometers)
         userDefaults.set(date, forKey: Key.lastSyncDate)
         userDefaults.set(normalizedTodayDistance, forKey: Key.lastSyncedTodayDistanceKilometers)
+        distanceRefreshState = .succeeded(date: date)
+    }
+
+    func failDistanceRefresh(message: String) {
+        distanceRefreshState = .failed(message: message)
     }
 
     func unlockBadge(_ badgeID: String) {

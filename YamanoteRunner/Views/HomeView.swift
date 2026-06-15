@@ -2,8 +2,14 @@ import SwiftUI
 
 struct HomeView: View {
     @StateObject private var todayDistanceViewModel = TodayDistanceViewModel()
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     @ObservedObject var appStateStore: AppStateStore
+
+    private var usesCompactHeightLayout: Bool {
+        verticalSizeClass == .compact
+    }
 
     private var routeProgress: YamanoteRouteProgress {
         appStateStore.routeProgress
@@ -11,15 +17,24 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 14) {
-                progressDashboard
-                currentLocationPanel
-                actionLinks
-                Spacer(minLength: 0)
+            ScrollView {
+                VStack(spacing: usesCompactHeightLayout ? 10 : 14) {
+                    if usesCompactHeightLayout {
+                        HStack(alignment: .top, spacing: 12) {
+                            progressDashboard
+                            currentLocationPanel
+                        }
+                    } else {
+                        progressDashboard
+                        currentLocationPanel
+                    }
+
+                    actionLinks
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 2)
+                .padding(.bottom, 10)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 2)
-            .padding(.bottom, 10)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(
                 LinearGradient(
@@ -42,6 +57,7 @@ struct HomeView: View {
                         } label: {
                             Label("距離を再取得", systemImage: "arrow.clockwise")
                         }
+                        .disabled(appStateStore.distanceRefreshState.isLoading)
 
                         Button("初回設定をやり直す", action: appStateStore.restartSetup)
                     } label: {
@@ -53,25 +69,40 @@ struct HomeView: View {
             .task {
                 await refreshTodayDistance()
             }
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active else { return }
+                Task {
+                    await refreshTodayDistance()
+                }
+            }
         }
     }
 
     private func refreshTodayDistance() async {
+        guard !appStateStore.distanceRefreshState.isLoading else { return }
+        appStateStore.beginDistanceRefresh()
         await todayDistanceViewModel.loadTodayDistance()
         if let distanceKilometers = todayDistanceViewModel.distanceKilometers {
             appStateStore.syncTodayDistance(distanceKilometers)
+        } else if let errorMessage = todayDistanceViewModel.errorMessage {
+            appStateStore.failDistanceRefresh(message: errorMessage)
+        } else {
+            appStateStore.failDistanceRefresh(message: "距離を取得できませんでした。")
         }
     }
 
     private var progressDashboard: some View {
         VStack(spacing: 12) {
-            HStack(alignment: .center, spacing: 16) {
+            HStack(alignment: .center, spacing: usesCompactHeightLayout ? 12 : 16) {
                 ProgressRing(
                     progress: routeProgress.progressInCurrentLap,
                     label: progressPercentText,
                     caption: "\(routeProgress.currentLapNumber)周目"
                 )
-                .frame(width: 136, height: 136)
+                .frame(
+                    width: usesCompactHeightLayout ? 112 : 136,
+                    height: usesCompactHeightLayout ? 112 : 136
+                )
 
                 VStack(spacing: 8) {
                     MetricTile(
@@ -94,8 +125,8 @@ struct HomeView: View {
                 }
             }
 
-            if let errorMessage = todayDistanceViewModel.errorMessage {
-                Text(errorMessage)
+            if let statusText = distanceRefreshStatusText {
+                Text(statusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -108,6 +139,7 @@ struct HomeView: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(.green.opacity(0.12), lineWidth: 1)
         }
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     private var currentLocationPanel: some View {
@@ -119,6 +151,8 @@ struct HomeView: View {
                         .foregroundStyle(.secondary)
                     Text("\(routeProgress.currentSegment.from.name)〜\(routeProgress.currentSegment.to.name)")
                         .font(.title3.weight(.bold))
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.78)
                 }
 
                 Spacer()
@@ -129,6 +163,8 @@ struct HomeView: View {
                         .foregroundStyle(.secondary)
                     Text("あと\(formattedKilometers(routeProgress.distanceToNextStationKilometers))")
                         .font(.headline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
                 }
             }
 
@@ -163,31 +199,19 @@ struct HomeView: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(.green.opacity(0.12), lineWidth: 1)
         }
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     private var actionLinks: some View {
-        VStack(spacing: 10) {
-            NavigationLink {
-                StationSelectionView(
-                    selectedStation: appStateStore.startingStation,
-                    title: "開始駅を変更",
-                    actionTitle: "変更",
-                    onSelect: appStateStore.saveStartingStation
-                )
-            } label: {
-                CompactActionButton(symbol: "tram.fill", title: "開始駅")
-            }
+        let columns = [
+            GridItem(.adaptive(minimum: usesCompactHeightLayout ? 150 : 240), spacing: 10)
+        ]
 
+        return LazyVGrid(columns: columns, spacing: 10) {
             NavigationLink {
-                DirectionSelectionView(
-                    appStateStore: appStateStore,
-                    title: "進行方向を変更"
-                )
+                SettingsView(appStateStore: appStateStore)
             } label: {
-                CompactActionButton(
-                    symbol: "arrow.triangle.2.circlepath",
-                    title: appStateStore.selectedDirection.rawValue
-                )
+                CompactActionButton(symbol: "gearshape.fill", title: "設定")
             }
 
             NavigationLink {
@@ -201,10 +225,23 @@ struct HomeView: View {
 
     private var todayDistanceText: String {
         guard let distanceKilometers = todayDistanceViewModel.distanceKilometers else {
-            return todayDistanceViewModel.isLoading ? "取得中" : "--km"
+            return appStateStore.distanceRefreshState.isLoading ? "取得中" : "--km"
         }
 
         return formattedKilometers(distanceKilometers)
+    }
+
+    private var distanceRefreshStatusText: String? {
+        switch appStateStore.distanceRefreshState {
+        case .idle:
+            return nil
+        case .loading:
+            return "距離を更新中"
+        case .succeeded(let date):
+            return "最終更新 \(date.formatted(date: .omitted, time: .shortened))"
+        case .failed(let message):
+            return message
+        }
     }
 
     private var progressPercentText: String {
@@ -345,6 +382,145 @@ private struct CompactActionButton: View {
         .overlay {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(.green.opacity(0.12), lineWidth: 1)
+        }
+    }
+}
+
+private struct SettingsView: View {
+    @ObservedObject var appStateStore: AppStateStore
+    @State private var heightText = ""
+    @State private var heightError: String?
+
+    var body: some View {
+        Form {
+            Section("ユーザー情報") {
+                HStack {
+                    Label("身長", systemImage: "ruler")
+                    Spacer()
+                    TextField("未設定", text: $heightText)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 96)
+                    Text("cm")
+                        .foregroundStyle(.secondary)
+                }
+
+                if let heightError {
+                    Text(heightError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+
+                Button("身長を保存") {
+                    saveHeight()
+                }
+            }
+
+            Section("進捗設定") {
+                NavigationLink {
+                    StationSelectionView(
+                        selectedStation: appStateStore.startingStation,
+                        title: "開始駅を変更",
+                        actionTitle: "変更",
+                        onSelect: appStateStore.saveStartingStation
+                    )
+                } label: {
+                    SettingsValueRow(
+                        symbol: "tram.fill",
+                        title: "開始駅",
+                        value: appStateStore.startingStation.name
+                    )
+                }
+
+                NavigationLink {
+                    DirectionSelectionView(
+                        appStateStore: appStateStore,
+                        title: "進行方向を変更"
+                    )
+                } label: {
+                    SettingsValueRow(
+                        symbol: "arrow.triangle.2.circlepath",
+                        title: "進行方向",
+                        value: appStateStore.selectedDirection.rawValue
+                    )
+                }
+            }
+
+            Section("ヘルスケア") {
+                SettingsValueRow(
+                    symbol: "heart.fill",
+                    title: "距離データ",
+                    value: distanceStatusText
+                )
+            }
+
+            Section {
+                Button("初回設定をやり直す", role: .destructive) {
+                    appStateStore.restartSetup()
+                }
+            }
+        }
+        .navigationTitle("設定")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            heightText = appStateStore.heightCentimeters.map {
+                $0.formatted(.number.precision(.fractionLength(0...1)))
+            } ?? ""
+        }
+    }
+
+    private var distanceStatusText: String {
+        switch appStateStore.distanceRefreshState {
+        case .idle:
+            return "未取得"
+        case .loading:
+            return "更新中"
+        case .succeeded:
+            return "取得済み"
+        case .failed:
+            return "確認が必要"
+        }
+    }
+
+    private func saveHeight() {
+        let trimmedText = heightText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else {
+            _ = appStateStore.saveHeightCentimeters(nil)
+            heightError = nil
+            return
+        }
+
+        guard let heightCentimeters = Double(trimmedText) else {
+            heightError = "数値で入力してください。"
+            return
+        }
+
+        guard appStateStore.saveHeightCentimeters(heightCentimeters) else {
+            let range = AppStateStore.heightRangeCentimeters
+            heightError = "\(Int(range.lowerBound))〜\(Int(range.upperBound))cm の範囲で入力してください。"
+            return
+        }
+
+        heightText = appStateStore.heightCentimeters.map {
+            $0.formatted(.number.precision(.fractionLength(0...1)))
+        } ?? ""
+        heightError = nil
+    }
+}
+
+private struct SettingsValueRow: View {
+    let symbol: String
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Label(title, systemImage: symbol)
+            Spacer()
+            Text(value)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
     }
 }

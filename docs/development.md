@@ -107,3 +107,13 @@ make test SIMULATOR="iPhone 15"
 - XCTest 追加
 - README と docs の更新
 - Issue 単位の修正
+
+## HealthKit 距離同期
+
+Home 画面の距離同期は、次のタイミングで実行します。
+
+- Home 表示時
+- アプリがバックグラウンドから active に戻った時
+- Home のメニューから手動再取得した時
+
+HealthKit から取得した「今日の歩行・ランニング距離」は `AppStateStore.syncTodayDistance` に渡し、Store 側で前回同期との差分、累計距離、駅通過イベント、バッジ更新、同期状態をまとめて扱います。UI は `DistanceRefreshState` を表示するだけに寄せ、距離の加算判定を View に重複実装しない方針です。
