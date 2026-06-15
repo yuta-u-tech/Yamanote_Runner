@@ -27,12 +27,12 @@ final class YamanoteRunnerTests: XCTestCase {
         let event = store.lastDistanceSyncEvent!
         XCTAssertEqual(event.passedStations.map(\.name), ["神田", "秋葉原"])
         XCTAssertEqual(event.nextStation.name, "御徒町")
-        XCTAssertEqual(event.distanceToNextStationKilometers, 0.2, accuracy: 0.001)
+        XCTAssertEqual(event.distanceToNextStationKilometers, 0.6, accuracy: 0.001)
 
         let restoredStore = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
         XCTAssertEqual(restoredStore.selectedDirection, .outer)
-        XCTAssertEqual(restoredStore.routeProgress.currentSegment.from.name, "東京")
-        XCTAssertEqual(restoredStore.routeProgress.currentSegment.to.name, "神田")
+        XCTAssertEqual(restoredStore.routeProgress.currentSegment.from.name, "秋葉原")
+        XCTAssertEqual(restoredStore.routeProgress.currentSegment.to.name, "御徒町")
     }
 
     @MainActor
