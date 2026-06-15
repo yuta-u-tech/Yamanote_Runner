@@ -12,6 +12,8 @@
         "YamanoteRunner",
         "-sdk",
         "iphonesimulator",
+        "-destination",
+        "platform=iOS Simulator,name=iPhone 17",
         "-configuration",
         "Debug",
         "-derivedDataPath",
@@ -44,7 +46,7 @@
     {
       "label": "Boot Simulator",
       "type": "shell",
-      "command": "xcrun simctl boot \"iPhone 16 Pro\" || true",
+      "command": "xcrun simctl boot \"iPhone 17\" || true",
       "problemMatcher": []
     },
     {

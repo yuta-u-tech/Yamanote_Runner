@@ -245,6 +245,28 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertTrue(store.unlockedBadgeIDs.contains(RunnerBadge.fullLoopBadgeID))
     }
 
+    @MainActor
+    func testAppStateUnlocksThreeStationsBadge() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+
+        store.syncTodayDistance(3.2, at: date)
+
+        XCTAssertTrue(store.unlockedBadgeIDs.contains(RunnerBadge.threeStationsBadgeID))
+    }
+
+    @MainActor
+    func testAppStateUnlocksHalfLoopBadge() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+
+        store.syncTodayDistance(17.25, at: date)
+
+        XCTAssertTrue(store.unlockedBadgeIDs.contains(RunnerBadge.halfLoopBadgeID))
+    }
+
     func testRouteProgressRotatesRouteFromStartingStation() {
         let progress = YamanoteRoute.progress(
             for: 1.5,

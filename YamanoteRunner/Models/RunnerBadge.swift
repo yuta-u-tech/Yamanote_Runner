@@ -9,6 +9,8 @@ struct RunnerBadge: Identifiable {
     let isUnlocked: Bool
 
     static let startBadgeID = "start-line"
+    static let threeStationsBadgeID = "three-stations"
+    static let halfLoopBadgeID = "half-loop"
     static let fullLoopBadgeID = "full-loop"
 
     static func all(unlockedBadgeIDs: Set<String>) -> [RunnerBadge] {
@@ -22,20 +24,20 @@ struct RunnerBadge: Identifiable {
                 isUnlocked: unlockedBadgeIDs.contains(startBadgeID)
             ),
             .init(
-                id: "three-stations",
+                id: threeStationsBadgeID,
                 title: "3駅通過",
                 description: "3つの駅を通過する",
                 symbol: "figure.run",
                 imageName: "badge_three_stations",
-                isUnlocked: unlockedBadgeIDs.contains("three-stations")
+                isUnlocked: unlockedBadgeIDs.contains(threeStationsBadgeID)
             ),
             .init(
-                id: "half-loop",
+                id: halfLoopBadgeID,
                 title: "半周達成",
                 description: "山手線ルートの半分を進む",
                 symbol: "circle.lefthalf.filled",
                 imageName: "badge_half_loop",
-                isUnlocked: unlockedBadgeIDs.contains("half-loop")
+                isUnlocked: unlockedBadgeIDs.contains(halfLoopBadgeID)
             ),
             .init(
                 id: fullLoopBadgeID,
@@ -50,8 +52,8 @@ struct RunnerBadge: Identifiable {
 
     static let previewBadges: [RunnerBadge] = [
         .init(id: startBadgeID, title: "スタートライン", description: "開始駅を設定する", symbol: "flag.checkered", imageName: "badge_start_line", isUnlocked: true),
-        .init(id: "three-stations", title: "3駅通過", description: "3つの駅を通過する", symbol: "figure.run", imageName: "badge_three_stations", isUnlocked: false),
-        .init(id: "half-loop", title: "半周達成", description: "山手線ルートの半分を進む", symbol: "circle.lefthalf.filled", imageName: "badge_half_loop", isUnlocked: false),
+        .init(id: threeStationsBadgeID, title: "3駅通過", description: "3つの駅を通過する", symbol: "figure.run", imageName: "badge_three_stations", isUnlocked: false),
+        .init(id: halfLoopBadgeID, title: "半周達成", description: "山手線ルートの半分を進む", symbol: "circle.lefthalf.filled", imageName: "badge_half_loop", isUnlocked: false),
         .init(id: "full-loop", title: "一周ランナー", description: "山手線を一周する", symbol: "medal.fill", imageName: "badge_full_loop", isUnlocked: false)
     ]
 }

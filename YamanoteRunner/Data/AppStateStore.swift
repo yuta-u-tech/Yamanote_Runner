@@ -107,9 +107,7 @@ final class AppStateStore: ObservableObject {
             previousCumulativeDistanceKilometers: previousCumulativeDistanceKilometers,
             currentCumulativeDistanceKilometers: cumulativeDistanceKilometers
         )
-        if lastDistanceSyncEvent?.didCompleteLap == true {
-            unlockBadge(RunnerBadge.fullLoopBadgeID)
-        }
+        updateProgressBadges()
 
         userDefaults.set(cumulativeDistanceKilometers, forKey: Key.cumulativeDistanceKilometers)
         userDefaults.set(date, forKey: Key.lastSyncDate)
@@ -120,6 +118,23 @@ final class AppStateStore: ObservableObject {
         guard !unlockedBadgeIDs.contains(badgeID) else { return }
         unlockedBadgeIDs.insert(badgeID)
         userDefaults.set(Array(unlockedBadgeIDs).sorted(), forKey: Key.unlockedBadgeIDs)
+    }
+
+    private func updateProgressBadges() {
+        let progress = routeProgress
+        let passedStationCount = max(0, progress.passedStations.count - 1)
+
+        if passedStationCount >= 3 {
+            unlockBadge(RunnerBadge.threeStationsBadgeID)
+        }
+
+        if progress.completedLapCount > 0 || progress.distanceInCurrentLapKilometers >= YamanoteRoute.totalDistanceKilometers / 2 {
+            unlockBadge(RunnerBadge.halfLoopBadgeID)
+        }
+
+        if progress.completedLapCount > 0 {
+            unlockBadge(RunnerBadge.fullLoopBadgeID)
+        }
     }
 
     private func makeDistanceSyncEvent(

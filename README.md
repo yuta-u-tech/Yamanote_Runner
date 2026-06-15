@@ -43,6 +43,7 @@
   - 主要駅から選択
   - 全駅から選択
   - ランダム出発
+- 内回り・外回りの進行方向選択
 - 今日の移動距離表示
 - 山手線上の現在位置表示
 - 次の駅までの距離表示
@@ -133,9 +134,17 @@ YamanoteRunner/
 
 ```bash
 make build
+make test
 make run
 ```
 
-既定のシミュレータは `iPhone 16 Pro`、Bundle ID は `com.youbo0129ueno.YamanoteRunner` です。
+既定のシミュレータは `iPhone 17`、Bundle ID は `com.youbo0129ueno.YamanoteRunner` です。
 
 詳細な手順は [docs/development.md](docs/development.md) を参照してください。
+
+## v0.1の既知の制限
+
+- HealthKitの実データ取得は実機確認が必要です。
+- シミュレータでは歩行・ランニング距離が0kmになる場合があります。
+- バッジはv0.1向けの最小セットのみです。
+- v2.0の散歩マップ機能はサブスク枠として別Issueで扱います。

@@ -41,6 +41,19 @@ xcodebuild \
 make test
 ```
 
+直接 `xcodebuild` を使う場合:
+
+```bash
+xcodebuild \
+  -project YamanoteRunner.xcodeproj \
+  -scheme YamanoteRunner \
+  -sdk iphonesimulator \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -configuration Debug \
+  -derivedDataPath .build \
+  test
+```
+
 ## シミュレータで起動
 
 ```bash
@@ -50,7 +63,7 @@ make run
 内部では次の順で実行します。
 
 ```bash
-xcrun simctl boot "iPhone 16 Pro" || true
+xcrun simctl boot "iPhone 17" || true
 xcrun simctl install booted .build/Build/Products/Debug-iphonesimulator/YamanoteRunner.app
 xcrun simctl launch booted com.youbo0129ueno.YamanoteRunner
 ```
@@ -59,6 +72,7 @@ xcrun simctl launch booted com.youbo0129ueno.YamanoteRunner
 
 ```bash
 make run SIMULATOR="iPhone 15"
+make test SIMULATOR="iPhone 15"
 ```
 
 ## VS Code タスク
