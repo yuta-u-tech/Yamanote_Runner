@@ -44,6 +44,8 @@
   - 全駅から選択
   - ランダム出発
 - 今日の移動距離表示
+- 今日の歩数表示
+- 身長ベースの推定歩幅による距離換算
 - 山手線上の現在位置表示
 - 次の駅までの距離表示
 - 駅通過イベント表示
@@ -85,6 +87,16 @@ Xcodeでの手作業をできるだけ減らし、日常的な実装・修正・
 - 実機ビルド
 - SwiftUI Preview確認
 - App Store提出前の確認
+
+## 距離換算の前提
+
+v0.1 では HealthKit から今日の歩数を取得し、身長から推定した歩幅を使って距離へ換算します。
+
+- 既定身長: 170cm
+- 推定歩幅: `身長(cm) * 0.415`
+- 距離: `歩数 * 推定歩幅`
+
+身長は Home の「歩幅設定」から変更できます。身長が未設定の場合は既定値を使うため、初回起動直後でも進捗計算は動作します。
 
 ## 技術スタック
 
@@ -139,3 +151,5 @@ make run
 既定のシミュレータは `iPhone 16 Pro`、Bundle ID は `com.youbo0129ueno.YamanoteRunner` です。
 
 詳細な手順は [docs/development.md](docs/development.md) を参照してください。
+
+永続化設計は [docs/persistence.md](docs/persistence.md)、App Store 提出前の確認項目は [docs/app-store-checklist.md](docs/app-store-checklist.md) を参照してください。

@@ -2,6 +2,23 @@ import XCTest
 @testable import YamanoteRunner
 
 final class YamanoteRunnerTests: XCTestCase {
+    func testStepDistanceEstimatorUsesDefaultHeightFallback() {
+        let estimator = StepDistanceEstimator(heightCentimeters: nil)
+
+        XCTAssertEqual(estimator.normalizedHeightCentimeters, 170, accuracy: 0.001)
+        XCTAssertEqual(estimator.estimatedStrideMeters, 0.7055, accuracy: 0.001)
+        XCTAssertEqual(estimator.kilometers(for: 10_000), 7.055, accuracy: 0.001)
+    }
+
+    func testStepDistanceEstimatorUsesHeightBasedStride() {
+        let shortEstimator = StepDistanceEstimator(heightCentimeters: 150)
+        let tallEstimator = StepDistanceEstimator(heightCentimeters: 180)
+
+        XCTAssertLessThan(shortEstimator.kilometers(for: 10_000), tallEstimator.kilometers(for: 10_000))
+        XCTAssertEqual(tallEstimator.estimatedStrideMeters, 0.747, accuracy: 0.001)
+        XCTAssertEqual(tallEstimator.kilometers(for: 0), 0, accuracy: 0.001)
+    }
+
     @MainActor
     func testAppStatePersistsInitialSetup() {
         let userDefaults = makeIsolatedUserDefaults()
@@ -13,6 +30,17 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertTrue(restoredStore.hasCompletedInitialSetup)
         XCTAssertEqual(restoredStore.startingStationName, YamanoteStation.all[3].name)
         XCTAssertEqual(restoredStore.unlockedBadgeIDs, [RunnerBadge.startBadgeID])
+    }
+
+    @MainActor
+    func testAppStatePersistsHeightSetting() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults)
+
+        store.saveHeightCentimeters(180)
+
+        let restoredStore = AppStateStore(userDefaults: userDefaults)
+        XCTAssertEqual(restoredStore.heightCentimeters, 180, accuracy: 0.001)
     }
 
     @MainActor

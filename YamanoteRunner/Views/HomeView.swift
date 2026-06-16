@@ -45,7 +45,9 @@ struct HomeView: View {
     }
 
     private func refreshTodayDistance() async {
-        await todayDistanceViewModel.loadTodayDistance()
+        await todayDistanceViewModel.loadTodayDistance(
+            heightCentimeters: appStateStore.heightCentimeters
+        )
         if let distanceKilometers = todayDistanceViewModel.distanceKilometers {
             appStateStore.syncTodayDistance(distanceKilometers)
         }
@@ -91,12 +93,27 @@ struct HomeView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Text("ヘルスケアの歩行・ランニング距離を反映しています。")
+                Text("HealthKitの歩数を身長ベースの推定歩幅で距離換算しています。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Divider()
+
+            MetricRow(
+                title: "今日の歩数",
+                value: todayStepCountText
+            )
+
+            MetricRow(
+                title: "取得状態",
+                value: todayDistanceViewModel.statusText
+            )
+
+            MetricRow(
+                title: "推定歩幅",
+                value: estimatedStrideText
+            )
 
             MetricRow(
                 title: "今回同期で増えた距離",
@@ -114,6 +131,23 @@ struct HomeView: View {
         }
 
         return formattedKilometers(distanceKilometers)
+    }
+
+    private var todayStepCountText: String {
+        guard let stepCount = todayDistanceViewModel.stepCount else {
+            return todayDistanceViewModel.isLoading ? "取得中" : "--歩"
+        }
+
+        return "\(stepCount.formatted())歩"
+    }
+
+    private var estimatedStrideText: String {
+        guard let estimatedStrideMeters = todayDistanceViewModel.estimatedStrideMeters else {
+            return "\(Int(appStateStore.heightCentimeters))cm設定"
+        }
+
+        let centimeters = estimatedStrideMeters * 100
+        return "\(centimeters.formatted(.number.precision(.fractionLength(1))))cm"
     }
 
     @ViewBuilder
@@ -271,6 +305,16 @@ struct HomeView: View {
                     description: "獲得済み \(appStateStore.unlockedBadgeIDs.count) / 4"
                 )
             }
+
+            NavigationLink {
+                StepDistanceSettingsView(appStateStore: appStateStore)
+            } label: {
+                ActionRow(
+                    symbol: "ruler.fill",
+                    title: "歩幅設定",
+                    description: "身長 \(Int(appStateStore.heightCentimeters))cm"
+                )
+            }
         }
         .buttonStyle(.plain)
     }
@@ -281,6 +325,46 @@ struct HomeView: View {
 
     private func formattedKilometers(_ distanceKilometers: Double) -> String {
         "\(distanceKilometers.formatted(.number.precision(.fractionLength(1))))km"
+    }
+}
+
+private struct StepDistanceSettingsView: View {
+    @ObservedObject var appStateStore: AppStateStore
+    @State private var heightCentimeters: Double
+
+    init(appStateStore: AppStateStore) {
+        self.appStateStore = appStateStore
+        _heightCentimeters = State(initialValue: appStateStore.heightCentimeters)
+    }
+
+    var body: some View {
+        Form {
+            Section("身長") {
+                Stepper(
+                    "\(Int(heightCentimeters))cm",
+                    value: $heightCentimeters,
+                    in: 100...220,
+                    step: 1
+                )
+
+                MetricRow(
+                    title: "推定歩幅",
+                    value: "\(estimatedStrideCentimeters.formatted(.number.precision(.fractionLength(1))))cm"
+                )
+            }
+
+            Section {
+                Button("保存") {
+                    appStateStore.saveHeightCentimeters(heightCentimeters)
+                }
+            }
+        }
+        .navigationTitle("歩幅設定")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var estimatedStrideCentimeters: Double {
+        StepDistanceEstimator(heightCentimeters: heightCentimeters).estimatedStrideMeters * 100
     }
 }
 

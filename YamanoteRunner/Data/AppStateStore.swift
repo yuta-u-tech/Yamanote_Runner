@@ -9,6 +9,7 @@ final class AppStateStore: ObservableObject {
     @Published private(set) var lastSyncedTodayDistanceKilometers: Double
     @Published private(set) var lastAddedChallengeDistanceKilometers: Double
     @Published private(set) var lastDistanceSyncEvent: DistanceSyncEvent?
+    @Published private(set) var heightCentimeters: Double
     @Published private(set) var unlockedBadgeIDs: Set<String>
 
     private let userDefaults: UserDefaults
@@ -20,6 +21,7 @@ final class AppStateStore: ObservableObject {
         static let cumulativeDistanceKilometers = "cumulativeDistanceKilometers"
         static let lastSyncDate = "lastSyncDate"
         static let lastSyncedTodayDistanceKilometers = "lastSyncedTodayDistanceKilometers"
+        static let heightCentimeters = "heightCentimeters"
         static let unlockedBadgeIDs = "unlockedBadgeIDs"
     }
 
@@ -33,6 +35,8 @@ final class AppStateStore: ObservableObject {
         lastSyncedTodayDistanceKilometers = userDefaults.double(forKey: Key.lastSyncedTodayDistanceKilometers)
         lastAddedChallengeDistanceKilometers = 0
         lastDistanceSyncEvent = nil
+        let savedHeight = userDefaults.double(forKey: Key.heightCentimeters)
+        heightCentimeters = savedHeight > 0 ? savedHeight : StepDistanceEstimator.defaultHeightCentimeters
 
         if let lastSyncDateObject = userDefaults.object(forKey: Key.lastSyncDate) as? Date {
             lastSyncDate = lastSyncDateObject
@@ -70,6 +74,14 @@ final class AppStateStore: ObservableObject {
     func restartSetup() {
         hasCompletedInitialSetup = false
         userDefaults.set(false, forKey: Key.hasCompletedInitialSetup)
+    }
+
+    func saveHeightCentimeters(_ heightCentimeters: Double) {
+        let normalizedHeightCentimeters = StepDistanceEstimator(
+            heightCentimeters: heightCentimeters
+        ).normalizedHeightCentimeters
+        self.heightCentimeters = normalizedHeightCentimeters
+        userDefaults.set(normalizedHeightCentimeters, forKey: Key.heightCentimeters)
     }
 
     func syncTodayDistance(_ todayDistanceKilometers: Double, at date: Date = Date()) {
