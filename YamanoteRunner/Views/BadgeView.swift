@@ -119,7 +119,6 @@ private struct BadgeArtworkImage: View {
         Image(imageName)
             .resizable()
             .scaledToFill()
-            .scaleEffect(1.12)
             .frame(width: size, height: size)
             .clipped()
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
