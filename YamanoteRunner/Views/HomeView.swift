@@ -93,7 +93,7 @@ struct HomeView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Text("HealthKitの歩数を身長ベースの推定歩幅で距離換算しています。")
+                Text("HealthKitの歩行・ランニング距離を反映し、歩数から歩幅を計算しています。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -111,8 +111,8 @@ struct HomeView: View {
             )
 
             MetricRow(
-                title: "推定歩幅",
-                value: estimatedStrideText
+                title: todayDistanceViewModel.isStrideEstimated ? "推定歩幅" : "実績歩幅",
+                value: strideText
             )
 
             MetricRow(
@@ -141,12 +141,12 @@ struct HomeView: View {
         return "\(stepCount.formatted())歩"
     }
 
-    private var estimatedStrideText: String {
-        guard let estimatedStrideMeters = todayDistanceViewModel.estimatedStrideMeters else {
+    private var strideText: String {
+        guard let strideMeters = todayDistanceViewModel.strideMeters else {
             return "\(Int(appStateStore.heightCentimeters))cm設定"
         }
 
-        let centimeters = estimatedStrideMeters * 100
+        let centimeters = strideMeters * 100
         return "\(centimeters.formatted(.number.precision(.fractionLength(1))))cm"
     }
 

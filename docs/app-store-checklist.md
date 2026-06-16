@@ -7,7 +7,7 @@
 | HealthKit Capability が有効 | 要確認 | Xcode の Signing & Capabilities |
 | HealthKit entitlements が存在 | 実装済み | `YamanoteRunner/YamanoteRunner.entitlements` |
 | 歩数読み取りの許可フロー | 実装済み | 初回起動時・未許可時の画面 |
-| 歩数から距離への換算 | 実装済み | 身長設定と Home 表示 |
+| HealthKit距離と歩数に基づく歩幅表示 | 実装済み | 身長設定と Home 表示 |
 | 初回設定フロー | 実装済み | 開始駅選択から Home 遷移 |
 | 一周達成・バッジ解放 | 実装済み | 34.5km 到達テスト |
 

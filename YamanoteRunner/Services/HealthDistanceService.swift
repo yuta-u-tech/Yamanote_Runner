@@ -4,6 +4,7 @@ import HealthKit
 enum HealthDistanceError: LocalizedError, Equatable {
     case unavailable
     case stepCountTypeUnavailable
+    case distanceTypeUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -11,6 +12,8 @@ enum HealthDistanceError: LocalizedError, Equatable {
             "ヘルスケアデータを利用できません。"
         case .stepCountTypeUnavailable:
             "歩数を取得できません。"
+        case .distanceTypeUnavailable:
+            "歩行・ランニング距離を取得できません。"
         }
     }
 }
@@ -19,7 +22,8 @@ struct DailyWalkingRunningDistance: Equatable {
     let date: Date
     let stepCount: Int
     let kilometers: Double
-    let estimatedStrideMeters: Double
+    let strideMeters: Double
+    let isStrideEstimated: Bool
 }
 
 struct StepDistanceEstimator: Equatable {
@@ -42,6 +46,14 @@ struct StepDistanceEstimator: Equatable {
     func kilometers(for stepCount: Int) -> Double {
         guard stepCount > 0 else { return 0 }
         return Double(stepCount) * estimatedStrideMeters / 1000
+    }
+
+    func strideMeters(distanceKilometers: Double, stepCount: Int) -> (meters: Double, isEstimated: Bool) {
+        guard stepCount > 0, distanceKilometers > 0 else {
+            return (estimatedStrideMeters, true)
+        }
+
+        return (distanceKilometers * 1000 / Double(stepCount), false)
     }
 }
 
@@ -66,27 +78,54 @@ final class HealthDistanceService {
             throw HealthDistanceError.stepCountTypeUnavailable
         }
 
+        guard let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning) else {
+            throw HealthDistanceError.distanceTypeUnavailable
+        }
+
         let startOfDay = calendar.startOfDay(for: now)
         let predicate = HKQuery.predicateForSamples(
             withStart: startOfDay,
             end: now,
             options: [.strictStartDate]
         )
-        let descriptor = HKStatisticsQueryDescriptor(
-            predicate: HKSamplePredicate.quantitySample(type: stepCountType, predicate: predicate),
-            options: .cumulativeSum
+        let stepCount = Int(
+            try await cumulativeQuantity(
+                for: stepCountType,
+                unit: .count(),
+                predicate: predicate
+            )
         )
-
-        let statistics = try await descriptor.result(for: healthStore)
-        let stepCount = Int(statistics?.sumQuantity()?.doubleValue(for: .count()) ?? 0)
+        let kilometers = try await cumulativeQuantity(
+            for: distanceType,
+            unit: .meterUnit(with: .kilo),
+            predicate: predicate
+        )
         let estimator = StepDistanceEstimator(heightCentimeters: heightCentimeters)
+        let stride = estimator.strideMeters(
+            distanceKilometers: kilometers,
+            stepCount: stepCount
+        )
 
         return DailyWalkingRunningDistance(
             date: now,
             stepCount: stepCount,
-            kilometers: estimator.kilometers(for: stepCount),
-            estimatedStrideMeters: estimator.estimatedStrideMeters
+            kilometers: kilometers,
+            strideMeters: stride.meters,
+            isStrideEstimated: stride.isEstimated
         )
+    }
+
+    private func cumulativeQuantity(
+        for quantityType: HKQuantityType,
+        unit: HKUnit,
+        predicate: NSPredicate
+    ) async throws -> Double {
+        let descriptor = HKStatisticsQueryDescriptor(
+            predicate: HKSamplePredicate.quantitySample(type: quantityType, predicate: predicate),
+            options: .cumulativeSum
+        )
+        let statistics = try await descriptor.result(for: healthStore)
+        return statistics?.sumQuantity()?.doubleValue(for: unit) ?? 0
     }
 }
 
@@ -94,7 +133,8 @@ final class HealthDistanceService {
 final class TodayDistanceViewModel: ObservableObject {
     @Published private(set) var distanceKilometers: Double?
     @Published private(set) var stepCount: Int?
-    @Published private(set) var estimatedStrideMeters: Double?
+    @Published private(set) var strideMeters: Double?
+    @Published private(set) var isStrideEstimated = true
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
 
@@ -130,11 +170,13 @@ final class TodayDistanceViewModel: ObservableObject {
             )
             distanceKilometers = distance.kilometers
             stepCount = distance.stepCount
-            estimatedStrideMeters = distance.estimatedStrideMeters
+            strideMeters = distance.strideMeters
+            isStrideEstimated = distance.isStrideEstimated
         } catch {
             distanceKilometers = nil
             stepCount = nil
-            estimatedStrideMeters = nil
+            strideMeters = nil
+            isStrideEstimated = true
             errorMessage = error.localizedDescription
         }
 

@@ -19,6 +19,22 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(tallEstimator.kilometers(for: 0), 0, accuracy: 0.001)
     }
 
+    func testStepDistanceEstimatorCalculatesObservedStrideFromDistanceAndSteps() {
+        let estimator = StepDistanceEstimator(heightCentimeters: 170)
+        let stride = estimator.strideMeters(distanceKilometers: 4.2, stepCount: 6_000)
+
+        XCTAssertFalse(stride.isEstimated)
+        XCTAssertEqual(stride.meters, 0.7, accuracy: 0.001)
+    }
+
+    func testStepDistanceEstimatorFallsBackWhenObservedStrideCannotBeCalculated() {
+        let estimator = StepDistanceEstimator(heightCentimeters: 180)
+        let stride = estimator.strideMeters(distanceKilometers: 4.2, stepCount: 0)
+
+        XCTAssertTrue(stride.isEstimated)
+        XCTAssertEqual(stride.meters, estimator.estimatedStrideMeters, accuracy: 0.001)
+    }
+
     @MainActor
     func testAppStatePersistsInitialSetup() {
         let userDefaults = makeIsolatedUserDefaults()
