@@ -81,7 +81,9 @@ struct HomeView: View {
     private func refreshTodayDistance() async {
         guard !appStateStore.distanceRefreshState.isLoading else { return }
         appStateStore.beginDistanceRefresh()
-        await todayDistanceViewModel.loadTodayDistance()
+        await todayDistanceViewModel.loadTodayDistance(
+            heightCentimeters: appStateStore.heightCentimeters
+        )
         if let distanceKilometers = todayDistanceViewModel.distanceKilometers {
             appStateStore.syncTodayDistance(distanceKilometers)
         } else if let errorMessage = todayDistanceViewModel.errorMessage {
@@ -109,6 +111,18 @@ struct HomeView: View {
                         title: "今日",
                         value: todayDistanceText,
                         symbol: "figure.walk"
+                    )
+
+                    MetricTile(
+                        title: "歩数",
+                        value: todayStepCountText,
+                        symbol: "shoeprints.fill"
+                    )
+
+                    MetricTile(
+                        title: todayDistanceViewModel.isStrideEstimated ? "推定歩幅" : "実績歩幅",
+                        value: strideText,
+                        symbol: "ruler"
                     )
 
                     MetricTile(
@@ -229,6 +243,26 @@ struct HomeView: View {
         }
 
         return formattedKilometers(distanceKilometers)
+    }
+
+    private var todayStepCountText: String {
+        guard let stepCount = todayDistanceViewModel.stepCount else {
+            return appStateStore.distanceRefreshState.isLoading ? "取得中" : "--歩"
+        }
+
+        return "\(stepCount.formatted())歩"
+    }
+
+    private var strideText: String {
+        guard let strideMeters = todayDistanceViewModel.strideMeters else {
+            let fallbackStride = StepDistanceEstimator(
+                heightCentimeters: appStateStore.heightCentimeters
+            ).estimatedStrideMeters
+            return "\((fallbackStride * 100).formatted(.number.precision(.fractionLength(1))))cm"
+        }
+
+        let centimeters = strideMeters * 100
+        return "\(centimeters.formatted(.number.precision(.fractionLength(1))))cm"
     }
 
     private var distanceRefreshStatusText: String? {

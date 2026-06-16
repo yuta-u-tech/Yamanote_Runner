@@ -21,11 +21,13 @@ struct HealthPermissionView: View {
                     .foregroundStyle(.secondary)
             }
 
-            if authorizationState == .denied {
-                VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 12) {
+                PermissionGuideRow(symbol: statusSymbol, text: statusText)
+
+                if authorizationState == .denied {
                     PermissionGuideRow(symbol: "gearshape", text: "設定アプリを開く")
                     PermissionGuideRow(symbol: "heart.text.square", text: "ヘルスケアのデータアクセスを許可")
-                    PermissionGuideRow(symbol: "figure.walk", text: "歩行・ランニング距離をオン")
+                    PermissionGuideRow(symbol: "figure.walk", text: "歩数と歩行・ランニング距離をオン")
                 }
             }
 
@@ -71,9 +73,9 @@ struct HealthPermissionView: View {
         case .denied:
             "歩行・ランニング距離を反映するには、設定からヘルスケアの読み取りを許可してください。"
         case .requesting:
-            "歩行・ランニング距離の読み取り権限を確認しています。"
+            "歩数と歩行・ランニング距離の読み取り権限を確認しています。"
         default:
-            "毎日の歩行・ランニング距離を山手線一周の進捗に反映します。"
+            "毎日の歩数を距離へ換算し、山手線一周の進捗に反映します。"
         }
     }
 
@@ -94,6 +96,34 @@ struct HealthPermissionView: View {
 
     private var iconColor: Color {
         authorizationState == .denied ? .orange : .green
+    }
+
+    private var statusText: String {
+        switch authorizationState {
+        case .unavailable:
+            "HealthKit: 利用不可"
+        case .notDetermined:
+            "HealthKit: 許可リクエスト可能"
+        case .requesting:
+            "HealthKit: 取得準備中"
+        case .authorized:
+            "HealthKit: 許可済み"
+        case .denied:
+            "HealthKit: 未許可"
+        }
+    }
+
+    private var statusSymbol: String {
+        switch authorizationState {
+        case .authorized:
+            "checkmark.circle.fill"
+        case .requesting:
+            "clock.fill"
+        case .denied, .unavailable:
+            "exclamationmark.circle.fill"
+        case .notDetermined:
+            "questionmark.circle.fill"
+        }
     }
 }
 

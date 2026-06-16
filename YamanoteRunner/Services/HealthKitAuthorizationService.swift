@@ -27,7 +27,7 @@ final class HealthKitAuthorizationService: ObservableObject {
             return
         }
 
-        switch healthStore.authorizationStatus(for: Self.walkingRunningDistanceType) {
+        switch healthStore.authorizationStatus(for: Self.stepCountType) {
         case .notDetermined:
             authorizationState = .notDetermined
         case .sharingAuthorized:
@@ -55,7 +55,7 @@ final class HealthKitAuthorizationService: ObservableObject {
         do {
             try await healthStore.requestAuthorization(
                 toShare: [],
-                read: [Self.walkingRunningDistanceType]
+                read: [Self.stepCountType, Self.walkingRunningDistanceType]
             )
             UserDefaults.standard.set(true, forKey: hasRequestedAuthorizationKey)
             authorizationState = .authorized
@@ -63,6 +63,13 @@ final class HealthKitAuthorizationService: ObservableObject {
             UserDefaults.standard.set(true, forKey: hasRequestedAuthorizationKey)
             authorizationState = .denied
         }
+    }
+
+    private static var stepCountType: HKQuantityType {
+        guard let type = HKObjectType.quantityType(forIdentifier: .stepCount) else {
+            preconditionFailure("Step count type is unavailable.")
+        }
+        return type
     }
 
     private static var walkingRunningDistanceType: HKQuantityType {

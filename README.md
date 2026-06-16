@@ -66,6 +66,16 @@
 - アプリ内課金
 - 詳細な統計グラフ
 
+## 距離と歩幅の扱い
+
+v0.1 では HealthKit から今日の歩行・ランニング距離を取得し、その距離を山手線進捗へ反映します。歩数も HealthKit から取得し、取得距離と歩数から実績歩幅を計算して Home に表示します。
+
+- 既定身長: 170cm
+- 実績歩幅: `HealthKit距離 / 歩数`
+- 推定歩幅: `身長(cm) * 0.415`
+
+歩数が0、または距離が0の場合は実績歩幅を計算できないため、身長ベースの推定歩幅を表示します。身長は設定画面から変更できます。
+
 ## 開発方針
 
 本プロジェクトでは、Codexを活用したIssue駆動開発を前提とします。
@@ -142,6 +152,8 @@ make run
 既定のシミュレータは `iPhone 17`、Bundle ID は `com.youbo0129ueno.YamanoteRunner` です。
 
 詳細な手順は [docs/development.md](docs/development.md) を参照してください。
+
+永続化設計は [docs/persistence.md](docs/persistence.md)、App Store 提出前の確認項目は [docs/app-store-checklist.md](docs/app-store-checklist.md) を参照してください。
 
 ## v0.1の既知の制限
 
