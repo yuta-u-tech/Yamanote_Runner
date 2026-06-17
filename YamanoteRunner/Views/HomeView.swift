@@ -53,24 +53,12 @@ struct HomeView: View {
             )
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 12) {
-                        Button {
-                            Task {
-                                await refreshTodayDistance()
-                            }
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .disabled(appStateStore.distanceRefreshState.isLoading)
-                        .accessibilityLabel("距離を再取得")
-
-                        NavigationLink {
-                            SettingsView(appStateStore: appStateStore)
-                        } label: {
-                            Image(systemName: "gearshape")
-                        }
-                        .accessibilityLabel("設定")
+                    NavigationLink {
+                        SettingsView(appStateStore: appStateStore)
+                    } label: {
+                        Image(systemName: "gearshape")
                     }
+                    .accessibilityLabel("設定")
                 }
             }
             .toolbarTitleDisplayMode(.inline)
