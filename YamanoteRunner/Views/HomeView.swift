@@ -52,21 +52,25 @@ struct HomeView: View {
                 )
             )
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            Task {
-                                await refreshTodayDistance()
-                            }
-                        } label: {
-                            Label("距離を再取得", systemImage: "arrow.clockwise")
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        Task {
+                            await refreshTodayDistance()
                         }
-                        .disabled(appStateStore.distanceRefreshState.isLoading)
-
-                        Button("初回設定をやり直す", action: appStateStore.restartSetup)
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: "arrow.clockwise")
                     }
+                    .disabled(appStateStore.distanceRefreshState.isLoading)
+                    .accessibilityLabel("距離を再取得")
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        SettingsView(appStateStore: appStateStore)
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                    }
+                    .accessibilityLabel("設定")
                 }
             }
             .toolbarTitleDisplayMode(.inline)
@@ -241,12 +245,6 @@ struct HomeView: View {
         ]
 
         return LazyVGrid(columns: columns, spacing: 10) {
-            NavigationLink {
-                SettingsView(appStateStore: appStateStore)
-            } label: {
-                CompactActionButton(symbol: "gearshape.fill", title: "設定")
-            }
-
             NavigationLink {
                 BadgeView(badges: RunnerBadge.all(unlockedBadgeIDs: appStateStore.unlockedBadgeIDs))
             } label: {

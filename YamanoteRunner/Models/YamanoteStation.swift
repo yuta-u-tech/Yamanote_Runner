@@ -235,9 +235,9 @@ enum YamanoteRoute {
     private static func segments(for direction: YamanoteRouteDirection) -> [YamanoteRouteSegment] {
         switch direction {
         case .inner:
-            return segments
-        case .outer:
             return reverseSegments
+        case .outer:
+            return segments
         }
     }
 

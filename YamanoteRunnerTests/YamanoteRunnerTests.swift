@@ -54,7 +54,7 @@ final class YamanoteRunnerTests: XCTestCase {
         let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
         let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
 
-        store.saveSelectedDirection(.outer)
+        store.saveSelectedDirection(.inner)
         store.syncTodayDistance(2.4, at: date)
 
         let event = store.lastDistanceSyncEvent!
@@ -63,7 +63,7 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(event.distanceToNextStationKilometers, 0.6, accuracy: 0.001)
 
         let restoredStore = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
-        XCTAssertEqual(restoredStore.selectedDirection, .outer)
+        XCTAssertEqual(restoredStore.selectedDirection, .inner)
         XCTAssertEqual(restoredStore.routeProgress.currentSegment.from.name, "秋葉原")
         XCTAssertEqual(restoredStore.routeProgress.currentSegment.to.name, "御徒町")
     }
@@ -161,41 +161,8 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(restoredStore.lastSyncedTodayDistanceKilometers, 3.5, accuracy: 0.001)
     }
 
-    func testRouteProgressStartsBetweenTokyoAndYurakucho() {
+    func testRouteProgressStartsBetweenTokyoAndKandaForInnerDirection() {
         let progress = YamanoteRoute.progress(for: 0.3)
-
-        XCTAssertEqual(progress.completedLapCount, 0)
-        XCTAssertEqual(progress.currentLapNumber, 1)
-        XCTAssertEqual(progress.startingStation.name, "東京")
-        XCTAssertEqual(progress.currentSegment.from.name, "東京")
-        XCTAssertEqual(progress.currentSegment.to.name, "有楽町")
-        XCTAssertEqual(progress.distanceFromSegmentStartKilometers, 0.3, accuracy: 0.001)
-        XCTAssertEqual(progress.distanceToNextStationKilometers, 0.5, accuracy: 0.001)
-        XCTAssertEqual(progress.passedStations.map(\.name), ["東京"])
-    }
-
-    func testRouteProgressCalculatesSecondLap() {
-        let progress = YamanoteRoute.progress(for: YamanoteRoute.totalDistanceKilometers + 0.4)
-
-        XCTAssertEqual(progress.completedLapCount, 1)
-        XCTAssertEqual(progress.currentLapNumber, 2)
-        XCTAssertEqual(progress.distanceInCurrentLapKilometers, 0.4, accuracy: 0.001)
-        XCTAssertEqual(progress.currentSegment.from.name, "東京")
-        XCTAssertEqual(progress.currentSegment.to.name, "有楽町")
-        XCTAssertEqual(progress.distanceToNextStationKilometers, 0.4, accuracy: 0.001)
-    }
-
-    func testRouteProgressTracksPassedStationsWithinLap() {
-        let progress = YamanoteRoute.progress(for: 2.0)
-
-        XCTAssertEqual(progress.currentSegment.from.name, "新橋")
-        XCTAssertEqual(progress.currentSegment.to.name, "浜松町")
-        XCTAssertEqual(progress.distanceFromSegmentStartKilometers, 0.1, accuracy: 0.001)
-        XCTAssertEqual(progress.passedStations.map(\.name), ["東京", "有楽町", "新橋"])
-    }
-
-    func testRouteProgressSupportsOuterDirection() {
-        let progress = YamanoteRoute.progress(for: 0.3, direction: .outer)
 
         XCTAssertEqual(progress.completedLapCount, 0)
         XCTAssertEqual(progress.currentLapNumber, 1)
@@ -207,8 +174,41 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(progress.passedStations.map(\.name), ["東京"])
     }
 
-    func testRoutePassedStationsUsesOuterDirection() {
-        let passedStations = YamanoteRoute.passedStations(from: 0, to: 2.4, direction: .outer)
+    func testRouteProgressCalculatesSecondLap() {
+        let progress = YamanoteRoute.progress(for: YamanoteRoute.totalDistanceKilometers + 0.4)
+
+        XCTAssertEqual(progress.completedLapCount, 1)
+        XCTAssertEqual(progress.currentLapNumber, 2)
+        XCTAssertEqual(progress.distanceInCurrentLapKilometers, 0.4, accuracy: 0.001)
+        XCTAssertEqual(progress.currentSegment.from.name, "東京")
+        XCTAssertEqual(progress.currentSegment.to.name, "神田")
+        XCTAssertEqual(progress.distanceToNextStationKilometers, 0.9, accuracy: 0.001)
+    }
+
+    func testRouteProgressTracksPassedStationsWithinLap() {
+        let progress = YamanoteRoute.progress(for: 2.0)
+
+        XCTAssertEqual(progress.currentSegment.from.name, "秋葉原")
+        XCTAssertEqual(progress.currentSegment.to.name, "御徒町")
+        XCTAssertEqual(progress.distanceFromSegmentStartKilometers, 0, accuracy: 0.001)
+        XCTAssertEqual(progress.passedStations.map(\.name), ["東京", "神田", "秋葉原"])
+    }
+
+    func testRouteProgressSupportsOuterDirectionTowardYurakucho() {
+        let progress = YamanoteRoute.progress(for: 0.3, direction: .outer)
+
+        XCTAssertEqual(progress.completedLapCount, 0)
+        XCTAssertEqual(progress.currentLapNumber, 1)
+        XCTAssertEqual(progress.startingStation.name, "東京")
+        XCTAssertEqual(progress.currentSegment.from.name, "東京")
+        XCTAssertEqual(progress.currentSegment.to.name, "有楽町")
+        XCTAssertEqual(progress.distanceFromSegmentStartKilometers, 0.3, accuracy: 0.001)
+        XCTAssertEqual(progress.distanceToNextStationKilometers, 0.5, accuracy: 0.001)
+        XCTAssertEqual(progress.passedStations.map(\.name), ["東京"])
+    }
+
+    func testRoutePassedStationsUsesInnerDirection() {
+        let passedStations = YamanoteRoute.passedStations(from: 0, to: 2.4, direction: .inner)
 
         XCTAssertEqual(passedStations.map(\.name), ["神田", "秋葉原"])
     }
@@ -216,7 +216,7 @@ final class YamanoteRunnerTests: XCTestCase {
     func testRoutePassedStationsBetweenDistances() {
         let passedStations = YamanoteRoute.passedStations(from: 0, to: 2.4)
 
-        XCTAssertEqual(passedStations.map(\.name), ["有楽町", "新橋"])
+        XCTAssertEqual(passedStations.map(\.name), ["神田", "秋葉原"])
     }
 
     func testRoutePassedStationsReturnsEmptyWhenNoStationWasPassed() {
@@ -235,9 +235,9 @@ final class YamanoteRunnerTests: XCTestCase {
 
         let event = store.lastDistanceSyncEvent!
         XCTAssertEqual(event.addedDistanceKilometers, 2.4, accuracy: 0.001)
-        XCTAssertEqual(event.passedStations.map(\.name), ["有楽町", "新橋"])
-        XCTAssertEqual(event.nextStation.name, "浜松町")
-        XCTAssertEqual(event.distanceToNextStationKilometers, 0.7, accuracy: 0.001)
+        XCTAssertEqual(event.passedStations.map(\.name), ["神田", "秋葉原"])
+        XCTAssertEqual(event.nextStation.name, "御徒町")
+        XCTAssertEqual(event.distanceToNextStationKilometers, 0.6, accuracy: 0.001)
     }
 
     func testRouteProgressCompletesLapAtThirtyFourPointFiveKilometers() {
@@ -248,7 +248,7 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(progress.currentLapNumber, 2)
         XCTAssertEqual(progress.distanceInCurrentLapKilometers, 0, accuracy: 0.001)
         XCTAssertEqual(progress.currentSegment.from.name, "東京")
-        XCTAssertEqual(progress.currentSegment.to.name, "有楽町")
+        XCTAssertEqual(progress.currentSegment.to.name, "神田")
     }
 
     func testRouteProgressCompletesLapInOuterDirection() {
@@ -258,8 +258,8 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(progress.currentLapNumber, 2)
         XCTAssertEqual(progress.distanceInCurrentLapKilometers, 0.4, accuracy: 0.001)
         XCTAssertEqual(progress.currentSegment.from.name, "東京")
-        XCTAssertEqual(progress.currentSegment.to.name, "神田")
-        XCTAssertEqual(progress.distanceToNextStationKilometers, 0.9, accuracy: 0.001)
+        XCTAssertEqual(progress.currentSegment.to.name, "有楽町")
+        XCTAssertEqual(progress.distanceToNextStationKilometers, 0.4, accuracy: 0.001)
     }
 
     @MainActor
