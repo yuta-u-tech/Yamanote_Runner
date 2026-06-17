@@ -14,6 +14,16 @@ enum DistanceRefreshState: Equatable {
     }
 }
 
+struct DailyRunHistoryRecord: Identifiable, Codable, Hashable {
+    let id: String
+    let date: Date
+    let distanceKilometers: Double
+    let passedStationNames: [String]
+    let reachedStationName: String
+    let currentLapNumber: Int
+    let updatedAt: Date
+}
+
 @MainActor
 final class AppStateStore: ObservableObject {
     @Published private(set) var hasCompletedInitialSetup: Bool
@@ -27,6 +37,7 @@ final class AppStateStore: ObservableObject {
     @Published private(set) var lastDistanceSyncEvent: DistanceSyncEvent?
     @Published private(set) var distanceRefreshState: DistanceRefreshState
     @Published private(set) var unlockedBadgeIDs: Set<String>
+    @Published private(set) var historyRecords: [DailyRunHistoryRecord]
 
     private let userDefaults: UserDefaults
     private let calendar: Calendar
@@ -41,6 +52,7 @@ final class AppStateStore: ObservableObject {
         static let lastSyncDate = "lastSyncDate"
         static let lastSyncedTodayDistanceKilometers = "lastSyncedTodayDistanceKilometers"
         static let unlockedBadgeIDs = "unlockedBadgeIDs"
+        static let historyRecords = "historyRecords"
     }
 
     init(userDefaults: UserDefaults = .standard, calendar: Calendar = .current) {
@@ -76,6 +88,7 @@ final class AppStateStore: ObservableObject {
 
         let badgeIDs = userDefaults.stringArray(forKey: Key.unlockedBadgeIDs) ?? []
         unlockedBadgeIDs = Set(badgeIDs)
+        historyRecords = Self.restoreHistoryRecords(from: userDefaults, key: Key.historyRecords)
     }
 
     var startingStation: YamanoteStation {
@@ -148,10 +161,16 @@ final class AppStateStore: ObservableObject {
         lastSyncDate = date
         lastSyncedTodayDistanceKilometers = normalizedTodayDistance
         lastAddedChallengeDistanceKilometers = additionalDistance
-        lastDistanceSyncEvent = makeDistanceSyncEvent(
+        let distanceSyncEvent = makeDistanceSyncEvent(
             addedDistanceKilometers: additionalDistance,
             previousCumulativeDistanceKilometers: previousCumulativeDistanceKilometers,
             currentCumulativeDistanceKilometers: cumulativeDistanceKilometers
+        )
+        lastDistanceSyncEvent = distanceSyncEvent
+        updateHistoryRecord(
+            todayDistanceKilometers: normalizedTodayDistance,
+            at: date,
+            event: distanceSyncEvent
         )
         updateProgressBadges()
 
@@ -214,5 +233,61 @@ final class AppStateStore: ObservableObject {
             completedLapCount: progress.completedLapCount - previousProgress.completedLapCount,
             currentLapNumber: progress.currentLapNumber
         )
+    }
+
+    private func updateHistoryRecord(
+        todayDistanceKilometers: Double,
+        at date: Date,
+        event: DistanceSyncEvent
+    ) {
+        let dayStart = calendar.startOfDay(for: date)
+        let id = historyRecordID(for: dayStart)
+        let progress = routeProgress
+        var passedStationNames = event.passedStations.map(\.name)
+
+        if let existingRecord = historyRecords.first(where: { $0.id == id }) {
+            passedStationNames = existingRecord.passedStationNames
+            for stationName in event.passedStations.map(\.name) where !passedStationNames.contains(stationName) {
+                passedStationNames.append(stationName)
+            }
+        }
+
+        let record = DailyRunHistoryRecord(
+            id: id,
+            date: dayStart,
+            distanceKilometers: todayDistanceKilometers,
+            passedStationNames: passedStationNames,
+            reachedStationName: progress.currentSegment.from.name,
+            currentLapNumber: progress.currentLapNumber,
+            updatedAt: date
+        )
+
+        historyRecords.removeAll { $0.id == id }
+        historyRecords.append(record)
+        historyRecords.sort { $0.date > $1.date }
+        saveHistoryRecords()
+    }
+
+    private func saveHistoryRecords() {
+        guard let data = try? JSONEncoder().encode(historyRecords) else { return }
+        userDefaults.set(data, forKey: Key.historyRecords)
+    }
+
+    private func historyRecordID(for date: Date) -> String {
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        let year = components.year ?? 0
+        let month = components.month ?? 0
+        let day = components.day ?? 0
+        return String(format: "%04d-%02d-%02d", year, month, day)
+    }
+
+    private static func restoreHistoryRecords(from userDefaults: UserDefaults, key: String) -> [DailyRunHistoryRecord] {
+        guard let data = userDefaults.data(forKey: key),
+            let records = try? JSONDecoder().decode([DailyRunHistoryRecord].self, from: data)
+        else {
+            return []
+        }
+
+        return records.sorted { $0.date > $1.date }
     }
 }

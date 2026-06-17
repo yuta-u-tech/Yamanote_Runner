@@ -268,15 +268,17 @@ struct HomeView: View {
     }
 
     private var actionLinks: some View {
-        let columns = [
-            GridItem(.adaptive(minimum: usesCompactHeightLayout ? 150 : 240), spacing: 10)
-        ]
-
-        return LazyVGrid(columns: columns, spacing: 10) {
+        VStack(spacing: 10) {
             NavigationLink {
                 BadgeView(badges: RunnerBadge.all(unlockedBadgeIDs: appStateStore.unlockedBadgeIDs))
             } label: {
                 CompactActionButton(symbol: "medal.fill", title: "バッジ")
+            }
+
+            NavigationLink {
+                HistoryView(records: appStateStore.historyRecords)
+            } label: {
+                CompactActionButton(symbol: "clock.arrow.circlepath", title: "履歴")
             }
         }
         .buttonStyle(.plain)
@@ -535,6 +537,68 @@ private struct CompactActionButton: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(.green.opacity(0.12), lineWidth: 1)
         }
+    }
+}
+
+private struct HistoryView: View {
+    let records: [DailyRunHistoryRecord]
+
+    var body: some View {
+        List {
+            if records.isEmpty {
+                ContentUnavailableView(
+                    "履歴はまだありません",
+                    systemImage: "clock.arrow.circlepath",
+                    description: Text("ヘルスケア距離を同期すると、日別の記録がここに表示されます。")
+                )
+            } else {
+                ForEach(records) { record in
+                    HistoryRecordRow(record: record)
+                }
+            }
+        }
+        .navigationTitle("履歴")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct HistoryRecordRow: View {
+    let record: DailyRunHistoryRecord
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(record.date.formatted(date: .abbreviated, time: .omitted))
+                    .font(.headline)
+
+                Spacer()
+
+                Text(formattedKilometers(record.distanceKilometers))
+                    .font(.headline.weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(.green)
+            }
+
+            HStack(spacing: 8) {
+                Label(record.reachedStationName, systemImage: "tram.fill")
+                Spacer()
+                Label("\(record.currentLapNumber)周目", systemImage: "arrow.triangle.2.circlepath")
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.green)
+
+            if !record.passedStationNames.isEmpty {
+                Text(record.passedStationNames.map { "\($0)通過" }.joined(separator: " / "))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func formattedKilometers(_ distanceKilometers: Double) -> String {
+        "\(distanceKilometers.formatted(.number.precision(.fractionLength(1))))km"
     }
 }
 

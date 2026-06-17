@@ -273,6 +273,39 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(event.distanceToNextStationKilometers, 0.6, accuracy: 0.001)
     }
 
+    @MainActor
+    func testAppStatePersistsDailyHistoryRecord() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+
+        store.syncTodayDistance(2.4, at: date)
+
+        let record = store.historyRecords.first!
+        XCTAssertEqual(record.distanceKilometers, 2.4, accuracy: 0.001)
+        XCTAssertEqual(record.passedStationNames, ["神田", "秋葉原"])
+        XCTAssertEqual(record.reachedStationName, "秋葉原")
+        XCTAssertEqual(record.currentLapNumber, 1)
+
+        let restoredStore = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        XCTAssertEqual(restoredStore.historyRecords, store.historyRecords)
+    }
+
+    @MainActor
+    func testAppStateMergesSameDayHistoryPassedStations() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let firstDate = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+        let secondDate = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 12))!
+
+        store.syncTodayDistance(1.4, at: firstDate)
+        store.syncTodayDistance(2.4, at: secondDate)
+
+        XCTAssertEqual(store.historyRecords.count, 1)
+        XCTAssertEqual(store.historyRecords[0].distanceKilometers, 2.4, accuracy: 0.001)
+        XCTAssertEqual(store.historyRecords[0].passedStationNames, ["神田", "秋葉原"])
+    }
+
     func testRouteProgressCompletesLapAtThirtyFourPointFiveKilometers() {
         let progress = YamanoteRoute.progress(for: 34.5)
 
