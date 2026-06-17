@@ -53,19 +53,23 @@ struct HomeView: View {
             )
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
+                    HStack(spacing: 12) {
                         Button {
                             Task {
                                 await refreshTodayDistance()
                             }
                         } label: {
-                            Label("距離を再取得", systemImage: "arrow.clockwise")
+                            Image(systemName: "arrow.clockwise")
                         }
                         .disabled(appStateStore.distanceRefreshState.isLoading)
+                        .accessibilityLabel("距離を再取得")
 
-                        Button("初回設定をやり直す", action: appStateStore.restartSetup)
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
+                        NavigationLink {
+                            SettingsView(appStateStore: appStateStore)
+                        } label: {
+                            Image(systemName: "gearshape")
+                        }
+                        .accessibilityLabel("設定")
                     }
                 }
             }
@@ -246,15 +250,9 @@ struct HomeView: View {
 
         return LazyVGrid(columns: columns, spacing: 10) {
             NavigationLink {
-                SettingsView(appStateStore: appStateStore)
-            } label: {
-                CompactActionButton(symbol: "gearshape.fill", title: "設定")
-            }
-
-            NavigationLink {
                 BadgeView(badges: RunnerBadge.all(unlockedBadgeIDs: appStateStore.unlockedBadgeIDs))
             } label: {
-                CompactActionButton(symbol: "medal.fill", title: "バッジ \(appStateStore.unlockedBadgeIDs.count)")
+                CompactActionButton(symbol: "medal.fill", title: "バッジ")
             }
         }
         .buttonStyle(.plain)

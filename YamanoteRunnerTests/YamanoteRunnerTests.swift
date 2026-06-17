@@ -207,6 +207,39 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(progress.passedStations.map(\.name), ["東京"])
     }
 
+    func testRouteProgressUsesInnerLoopOrderFromTokyo() {
+        let progress = YamanoteRoute.progress(for: 0.1, direction: .inner)
+
+        XCTAssertEqual(progress.currentSegment.from.name, "東京")
+        XCTAssertEqual(progress.currentSegment.to.name, "有楽町")
+    }
+
+    func testRouteProgressUsesOuterLoopOrderFromTokyo() {
+        let progress = YamanoteRoute.progress(for: 0.1, direction: .outer)
+
+        XCTAssertEqual(progress.currentSegment.from.name, "東京")
+        XCTAssertEqual(progress.currentSegment.to.name, "神田")
+    }
+
+    func testRouteProgressFollowsDirectionAfterChangingStartingStation() {
+        let startingStation = YamanoteStation.named("新宿")!
+        let innerProgress = YamanoteRoute.progress(
+            for: 0.1,
+            startingAt: startingStation,
+            direction: .inner
+        )
+        let outerProgress = YamanoteRoute.progress(
+            for: 0.1,
+            startingAt: startingStation,
+            direction: .outer
+        )
+
+        XCTAssertEqual(innerProgress.currentSegment.from.name, "新宿")
+        XCTAssertEqual(innerProgress.currentSegment.to.name, "新大久保")
+        XCTAssertEqual(outerProgress.currentSegment.from.name, "新宿")
+        XCTAssertEqual(outerProgress.currentSegment.to.name, "代々木")
+    }
+
     func testRoutePassedStationsUsesOuterDirection() {
         let passedStations = YamanoteRoute.passedStations(from: 0, to: 2.4, direction: .outer)
 
