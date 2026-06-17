@@ -413,7 +413,7 @@ private struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("ユーザー情報") {
+            Section {
                 HStack {
                     Label("身長", systemImage: "ruler")
                     Spacer()
@@ -434,6 +434,10 @@ private struct SettingsView: View {
                 Button("身長を保存") {
                     saveHeight()
                 }
+            } header: {
+                Text("ユーザー情報")
+            } footer: {
+                Text("身長は、歩数または距離が0で実績歩幅を計算できない場合の推定歩幅表示にだけ使います。山手線の進捗距離はHealthKitの歩行・ランニング距離を使用します。")
             }
 
             Section("進捗設定") {

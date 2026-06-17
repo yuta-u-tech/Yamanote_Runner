@@ -43,11 +43,6 @@ struct StepDistanceEstimator: Equatable {
         normalizedHeightCentimeters * 0.415 / 100
     }
 
-    func kilometers(for stepCount: Int) -> Double {
-        guard stepCount > 0 else { return 0 }
-        return Double(stepCount) * estimatedStrideMeters / 1000
-    }
-
     func strideMeters(distanceKilometers: Double, stepCount: Int) -> (meters: Double, isEstimated: Bool) {
         guard stepCount > 0, distanceKilometers > 0 else {
             return (estimatedStrideMeters, true)
