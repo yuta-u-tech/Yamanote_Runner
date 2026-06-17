@@ -60,10 +60,9 @@ struct DirectionSelectionView: View {
     private func directionDescription(for direction: YamanoteRouteDirection) -> String {
         switch direction {
         case .inner:
-            return "東京から内回りで進みます"
+            return "東京から神田・上野方面へ進みます"
         case .outer:
-            return "東京から外回りで進みます"
+            return "東京から有楽町・品川方面へ進みます"
         }
     }
 }
-
