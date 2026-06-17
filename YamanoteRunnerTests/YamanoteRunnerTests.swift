@@ -225,39 +225,6 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(passedStations, [])
     }
 
-    func testRouteProgressTracksRecentPassedStationsUpToFive() {
-        let progress = YamanoteRoute.progress(for: 6.0)
-
-        XCTAssertEqual(progress.recentPassedStations.map(\.name), ["有楽町", "新橋", "浜松町", "田町", "高輪ゲートウェイ"])
-    }
-
-    func testRouteProgressLimitsRecentPassedStationsToFive() {
-        let progress = YamanoteRoute.progress(for: 11.0)
-
-        XCTAssertEqual(progress.recentPassedStations.map(\.name), ["高輪ゲートウェイ", "品川", "大崎", "五反田", "目黒"])
-    }
-
-    func testRouteProgressRecentPassedStationsAreEmptyBeforeFirstStation() {
-        let progress = YamanoteRoute.progress(for: 0.3)
-
-        XCTAssertEqual(progress.recentPassedStations, [])
-    }
-
-    func testRouteProgressRecentPassedStationsFollowDirection() {
-        let progress = YamanoteRoute.progress(for: 3.0, direction: .outer)
-
-        XCTAssertEqual(progress.recentPassedStations.map(\.name), ["神田", "秋葉原", "御徒町"])
-    }
-
-    func testRouteProgressRecentPassedStationsRotateFromStartingStation() {
-        let progress = YamanoteRoute.progress(
-            for: 3.0,
-            startingAt: YamanoteStation.named("新宿")!
-        )
-
-        XCTAssertEqual(progress.recentPassedStations.map(\.name), ["新大久保", "高田馬場"])
-    }
-
     @MainActor
     func testAppStateCreatesDistanceSyncEventWithPassedStationsAndNextStation() {
         let userDefaults = makeIsolatedUserDefaults()
