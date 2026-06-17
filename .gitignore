@@ -5,3 +5,4 @@ DerivedData/
 xcuserdata/
 .pm-agentignore
 .pm-agent
+create_issues_from_review.sh
