@@ -246,6 +246,13 @@ struct HomeView: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(.green)
 
+            SegmentProgressBar(
+                progress: routeProgress.progressInCurrentSegment,
+                fromStationName: routeProgress.currentSegment.from.name,
+                toStationName: routeProgress.currentSegment.to.name,
+                progressText: segmentProgressText
+            )
+
             if let event = appStateStore.lastDistanceSyncEvent {
                 SyncEventSummary(event: event, formattedKilometers: formattedKilometers)
             }
@@ -305,6 +312,10 @@ struct HomeView: View {
 
     private var progressPercentText: String {
         routeProgress.progressInCurrentLap.formatted(.percent.precision(.fractionLength(0)))
+    }
+
+    private var segmentProgressText: String {
+        routeProgress.progressInCurrentSegment.formatted(.percent.precision(.fractionLength(0)))
     }
 
     private func formattedKilometers(_ distanceKilometers: Double) -> String {
@@ -382,6 +393,86 @@ private struct MetricTile: View {
     }
 }
 
+private struct SegmentProgressBar: View {
+    let progress: Double
+    let fromStationName: String
+    let toStationName: String
+    let progressText: String
+
+    private var clampedProgress: Double {
+        min(max(progress, 0), 1)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("区間達成率")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Text(progressText)
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(.green)
+            }
+
+            GeometryReader { proxy in
+                let trackWidth = proxy.size.width
+                let markerOffset = max(0, min(trackWidth - 18, trackWidth * clampedProgress - 9))
+
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(.green.opacity(0.14))
+                        .frame(height: 8)
+
+                    Capsule()
+                        .fill(.green)
+                        .frame(width: max(8, trackWidth * clampedProgress), height: 8)
+
+                    Image(systemName: "figure.walk.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.green)
+                        .background(.background, in: Circle())
+                        .offset(x: markerOffset)
+                }
+                .frame(height: 22)
+            }
+            .frame(height: 22)
+
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("0%")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(fromStationName)
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("100%")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(toStationName)
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+            }
+        }
+        .padding(10)
+        .background(.green.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(fromStationName)から\(toStationName)までの区間達成率 \(progressText)")
+    }
+}
+
 private struct SyncEventSummary: View {
     let event: DistanceSyncEvent
     let formattedKilometers: (Double) -> String
@@ -412,10 +503,10 @@ private struct SyncEventSummary: View {
         }
 
         if event.hasPassedStations {
-            return "+\(formattedKilometers(event.addedDistanceKilometers)) 進みました"
+            return "+\(formattedKilometers(event.addedDistanceKilometers)) 区間が更新されました"
         }
 
-        return "駅通過まで少し前進"
+        return "現在区間を進行中"
     }
 }
 

@@ -75,6 +75,11 @@ struct YamanoteRouteProgress: Hashable {
         guard YamanoteRoute.totalDistanceKilometers > 0 else { return 0 }
         return distanceInCurrentLapKilometers / YamanoteRoute.totalDistanceKilometers
     }
+
+    var progressInCurrentSegment: Double {
+        guard currentSegment.distanceKilometers > 0 else { return 0 }
+        return distanceFromSegmentStartKilometers / currentSegment.distanceKilometers
+    }
 }
 
 struct DistanceSyncEvent: Hashable {

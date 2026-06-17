@@ -169,6 +169,7 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(progress.currentSegment.to.name, "神田")
         XCTAssertEqual(progress.distanceFromSegmentStartKilometers, 0.3, accuracy: 0.001)
         XCTAssertEqual(progress.distanceToNextStationKilometers, 1.0, accuracy: 0.001)
+        XCTAssertEqual(progress.progressInCurrentSegment, 0.3 / 1.3, accuracy: 0.001)
         XCTAssertEqual(progress.passedStations.map(\.name), ["東京"])
     }
 
@@ -202,6 +203,7 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(progress.currentSegment.to.name, "有楽町")
         XCTAssertEqual(progress.distanceFromSegmentStartKilometers, 0.3, accuracy: 0.001)
         XCTAssertEqual(progress.distanceToNextStationKilometers, 0.5, accuracy: 0.001)
+        XCTAssertEqual(progress.progressInCurrentSegment, 0.3 / 0.8, accuracy: 0.001)
         XCTAssertEqual(progress.passedStations.map(\.name), ["東京"])
     }
 
