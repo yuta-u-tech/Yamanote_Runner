@@ -19,10 +19,6 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: usesCompactHeightLayout ? 10 : 14) {
-                    if !usesCompactHeightLayout {
-                        homeArtwork
-                    }
-
                     if usesCompactHeightLayout {
                         HStack(alignment: .top, spacing: 12) {
                             progressDashboard
@@ -36,7 +32,7 @@ struct HomeView: View {
                     actionLinks
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 2)
+                .padding(.top, 8)
                 .padding(.bottom, 10)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -72,21 +68,6 @@ struct HomeView: View {
                 }
             }
         }
-    }
-
-    private var homeArtwork: some View {
-        Image("home_yamanote_runner")
-            .resizable()
-            .scaledToFit()
-            .frame(maxWidth: .infinity)
-            .frame(height: 156)
-            .padding(.vertical, 8)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(.green.opacity(0.12), lineWidth: 1)
-            }
     }
 
     private func refreshTodayDistance() async {
