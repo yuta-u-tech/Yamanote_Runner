@@ -87,7 +87,15 @@ struct HomeView: View {
 
     private var progressDashboard: some View {
         VStack(spacing: 12) {
-            HStack(alignment: .center, spacing: usesCompactHeightLayout ? 12 : 16) {
+            if usesCompactHeightLayout {
+                HStack(alignment: .center, spacing: 12) {
+                    progressRing(size: 112)
+
+                    VStack(spacing: 8) {
+                        progressMetricTiles
+                    }
+                }
+            } else {
                 ProgressRing(
                     progress: routeProgress.progressInCurrentLap,
                     label: progressPercentText,
@@ -97,45 +105,9 @@ struct HomeView: View {
                     width: usesCompactHeightLayout ? 112 : 136,
                     height: usesCompactHeightLayout ? 112 : 136
                 )
+                .frame(maxWidth: .infinity, alignment: .center)
 
-                VStack(spacing: 8) {
-                    MetricTile(
-                        title: "今日",
-                        value: todayDistanceText,
-                        symbol: "figure.walk"
-                    )
-
-                    MetricTile(
-                        title: "歩数",
-                        value: todayStepCountText,
-                        symbol: "shoeprints.fill"
-                    )
-
-                    MetricTile(
-                        title: todayDistanceViewModel.isStrideEstimated ? "推定歩幅" : "実績歩幅",
-                        value: strideText,
-                        symbol: "ruler"
-                    )
-
-                    MetricTile(
-                        title: "今回",
-                        value: "+\(formattedKilometers(appStateStore.lastAddedChallengeDistanceKilometers))",
-                        symbol: "plus.circle"
-                    )
-
-                    MetricTile(
-                        title: "累計",
-                        value: formattedKilometers(appStateStore.cumulativeDistanceKilometers),
-                        symbol: "sum"
-                    )
-                }
-            }
-
-            if let statusText = distanceRefreshStatusText {
-                Text(statusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                progressMetricGrid
             }
         }
         .padding(12)
@@ -146,6 +118,86 @@ struct HomeView: View {
                 .stroke(.green.opacity(0.12), lineWidth: 1)
         }
         .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder
+    private var progressMetricTiles: some View {
+        MetricTile(
+            title: "今日",
+            value: todayDistanceText,
+            symbol: "figure.walk"
+        )
+
+        MetricTile(
+            title: "歩数",
+            value: todayStepCountText,
+            symbol: "shoeprints.fill"
+        )
+
+        MetricTile(
+            title: todayDistanceViewModel.isStrideEstimated ? "推定歩幅" : "実績歩幅",
+            value: strideText,
+            symbol: "ruler"
+        )
+
+        MetricTile(
+            title: "今回",
+            value: "+\(formattedKilometers(appStateStore.lastAddedChallengeDistanceKilometers))",
+            symbol: "plus.circle"
+        )
+
+        MetricTile(
+            title: "累計",
+            value: formattedKilometers(appStateStore.cumulativeDistanceKilometers),
+            symbol: "sum"
+        )
+    }
+
+    private var progressMetricGrid: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                MetricTile(
+                    title: "今日",
+                    value: todayDistanceText,
+                    symbol: "figure.walk"
+                )
+
+                MetricTile(
+                    title: "歩数",
+                    value: todayStepCountText,
+                    symbol: "shoeprints.fill"
+                )
+            }
+
+            HStack(spacing: 8) {
+                MetricTile(
+                    title: todayDistanceViewModel.isStrideEstimated ? "推定歩幅" : "実績歩幅",
+                    value: strideText,
+                    symbol: "ruler"
+                )
+
+                MetricTile(
+                    title: "今回",
+                    value: "+\(formattedKilometers(appStateStore.lastAddedChallengeDistanceKilometers))",
+                    symbol: "plus.circle"
+                )
+            }
+
+            MetricTile(
+                title: "累計",
+                value: formattedKilometers(appStateStore.cumulativeDistanceKilometers),
+                symbol: "sum"
+            )
+        }
+    }
+
+    private func progressRing(size: CGFloat) -> some View {
+        ProgressRing(
+            progress: routeProgress.progressInCurrentLap,
+            label: progressPercentText,
+            caption: "\(routeProgress.currentLapNumber)周目"
+        )
+        .frame(width: size, height: size)
     }
 
     private var currentLocationPanel: some View {
@@ -251,19 +303,6 @@ struct HomeView: View {
         return "\(centimeters.formatted(.number.precision(.fractionLength(1))))cm"
     }
 
-    private var distanceRefreshStatusText: String? {
-        switch appStateStore.distanceRefreshState {
-        case .idle:
-            return nil
-        case .loading:
-            return "距離を更新中"
-        case .succeeded(let date):
-            return "最終更新 \(date.formatted(date: .omitted, time: .shortened))"
-        case .failed(let message):
-            return message
-        }
-    }
-
     private var progressPercentText: String {
         routeProgress.progressInCurrentLap.formatted(.percent.precision(.fractionLength(0)))
     }
@@ -330,6 +369,8 @@ private struct MetricTile: View {
                 Text(value)
                     .font(.subheadline.weight(.bold))
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
             }
 
             Spacer(minLength: 0)
@@ -476,6 +517,12 @@ private struct SettingsView: View {
                     title: "距離データ",
                     value: distanceStatusText
                 )
+
+                SettingsValueRow(
+                    symbol: "clock",
+                    title: "最終更新",
+                    value: lastRefreshText
+                )
             }
 
             Section {
@@ -504,6 +551,14 @@ private struct SettingsView: View {
         case .failed:
             return "確認が必要"
         }
+    }
+
+    private var lastRefreshText: String {
+        guard let lastSyncDate = appStateStore.lastSyncDate else {
+            return "未取得"
+        }
+
+        return lastSyncDate.formatted(date: .omitted, time: .shortened)
     }
 
     private func saveHeight() {
