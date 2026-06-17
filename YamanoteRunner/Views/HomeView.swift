@@ -135,21 +135,15 @@ struct HomeView: View {
         )
 
         MetricTile(
-            title: todayDistanceViewModel.isStrideEstimated ? "推定歩幅" : "実績歩幅",
-            value: strideText,
-            symbol: "ruler"
-        )
-
-        MetricTile(
-            title: "今回",
-            value: "+\(formattedKilometers(appStateStore.lastAddedChallengeDistanceKilometers))",
-            symbol: "plus.circle"
-        )
-
-        MetricTile(
             title: "累計",
             value: formattedKilometers(appStateStore.cumulativeDistanceKilometers),
             symbol: "sum"
+        )
+
+        MetricTile(
+            title: "\(routeProgress.currentLapNumber)周目",
+            value: lapProgressText,
+            symbol: "arrow.triangle.2.circlepath"
         )
     }
 
@@ -171,23 +165,17 @@ struct HomeView: View {
 
             HStack(spacing: 8) {
                 MetricTile(
-                    title: todayDistanceViewModel.isStrideEstimated ? "推定歩幅" : "実績歩幅",
-                    value: strideText,
-                    symbol: "ruler"
+                    title: "累計",
+                    value: formattedKilometers(appStateStore.cumulativeDistanceKilometers),
+                    symbol: "sum"
                 )
 
                 MetricTile(
-                    title: "今回",
-                    value: "+\(formattedKilometers(appStateStore.lastAddedChallengeDistanceKilometers))",
-                    symbol: "plus.circle"
+                    title: "\(routeProgress.currentLapNumber)周目",
+                    value: lapProgressText,
+                    symbol: "arrow.triangle.2.circlepath"
                 )
             }
-
-            MetricTile(
-                title: "累計",
-                value: formattedKilometers(appStateStore.cumulativeDistanceKilometers),
-                symbol: "sum"
-            )
         }
     }
 
@@ -241,7 +229,7 @@ struct HomeView: View {
             HStack(spacing: 8) {
                 Label(appStateStore.startingStation.name, systemImage: "tram.fill")
                 Spacer()
-                Label("山手線 \(routeProgress.currentLapNumber)周目", systemImage: "arrow.triangle.2.circlepath")
+                Label(appStateStore.selectedDirection.rawValue, systemImage: "arrow.triangle.2.circlepath")
             }
             .font(.caption.weight(.semibold))
             .foregroundStyle(.green)
@@ -318,6 +306,10 @@ struct HomeView: View {
 
     private var segmentProgressText: String {
         routeProgress.progressInCurrentSegment.formatted(.percent.precision(.fractionLength(0)))
+    }
+
+    private var lapProgressText: String {
+        routeProgress.progressInCurrentLap.formatted(.percent.precision(.fractionLength(0)))
     }
 
     private func formattedKilometers(_ distanceKilometers: Double) -> String {
