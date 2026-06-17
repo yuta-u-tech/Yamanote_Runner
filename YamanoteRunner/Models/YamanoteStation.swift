@@ -100,7 +100,7 @@ enum YamanoteRouteDirection: String, Hashable {
 }
 
 enum YamanoteRoute {
-    static let segments: [YamanoteRouteSegment] = zip(stations, distancesToNextStationKilometers).map {
+    static let segments: [YamanoteRouteSegment] = zip(innerLoopStations, distancesToNextStationKilometers).map {
         YamanoteRouteSegment(from: $0.0, to: $0.1.to, distanceKilometers: $0.1.distance)
     }
 
@@ -182,7 +182,7 @@ enum YamanoteRoute {
         return passedStations
     }
 
-    private static let stations: [YamanoteStation] = {
+    private static let innerLoopStations: [YamanoteStation] = {
         let stationsAfterTokyo = YamanoteStation.all.dropFirst().reversed()
         return [YamanoteStation.all[0]] + stationsAfterTokyo
     }()
