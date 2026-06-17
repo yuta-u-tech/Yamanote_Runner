@@ -6,6 +6,7 @@ struct HomeView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     @ObservedObject var appStateStore: AppStateStore
+    @State private var dashboardPage = 0
 
     private var usesCompactHeightLayout: Bool {
         verticalSizeClass == .compact
@@ -86,38 +87,54 @@ struct HomeView: View {
     }
 
     private var progressDashboard: some View {
-        VStack(spacing: 12) {
-            if usesCompactHeightLayout {
-                HStack(alignment: .center, spacing: 12) {
-                    progressRing(size: 112)
-
-                    VStack(spacing: 8) {
-                        progressMetricTiles
-                    }
-                }
-            } else {
-                ProgressRing(
-                    progress: routeProgress.progressInCurrentLap,
-                    label: progressPercentText,
-                    caption: "\(routeProgress.currentLapNumber)周目"
-                )
-                .frame(
-                    width: usesCompactHeightLayout ? 112 : 136,
-                    height: usesCompactHeightLayout ? 112 : 136
-                )
-                .frame(maxWidth: .infinity, alignment: .center)
-
-                progressMetricGrid
+        dashboardContent
+            .padding(12)
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(.green.opacity(0.12), lineWidth: 1)
             }
+            .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder
+    private var dashboardContent: some View {
+        if usesCompactHeightLayout {
+            HStack(alignment: .center, spacing: 12) {
+                progressRing(size: 112)
+                VStack(spacing: 8) {
+                    progressMetricTiles
+                }
+            }
+        } else {
+            TabView(selection: $dashboardPage) {
+                statsPage.tag(0)
+                lineagePage.tag(1)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .always))
+            .frame(height: 284)
         }
-        .padding(12)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(.green.opacity(0.12), lineWidth: 1)
+    }
+
+    private var statsPage: some View {
+        VStack(spacing: 12) {
+            ProgressRing(
+                progress: routeProgress.progressInCurrentLap,
+                label: progressPercentText,
+                caption: "\(routeProgress.currentLapNumber)周目"
+            )
+            .frame(width: 136, height: 136)
+            .frame(maxWidth: .infinity, alignment: .center)
+
+            progressMetricGrid
         }
-        .frame(maxWidth: .infinity, alignment: .top)
+        .padding(.bottom, 18)
+    }
+
+    private var lineagePage: some View {
+        YamanoteLineageView(routeProgress: routeProgress)
+            .padding(.bottom, 18)
     }
 
     @ViewBuilder
