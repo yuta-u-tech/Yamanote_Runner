@@ -66,6 +66,7 @@ struct YamanoteRouteProgress: Hashable {
     let distanceFromSegmentStartKilometers: Double
     let distanceToNextStationKilometers: Double
     let passedStations: [YamanoteStation]
+    let recentPassedStations: [YamanoteStation]
 
     var currentLapNumber: Int {
         completedLapCount + 1
@@ -127,7 +128,8 @@ enum YamanoteRoute {
                 currentSegment: routeSegments[0],
                 distanceFromSegmentStartKilometers: 0,
                 distanceToNextStationKilometers: 0,
-                passedStations: []
+                passedStations: [],
+                recentPassedStations: []
             )
         }
 
@@ -143,8 +145,44 @@ enum YamanoteRoute {
             currentSegment: location.segment,
             distanceFromSegmentStartKilometers: location.distanceFromSegmentStart,
             distanceToNextStationKilometers: location.segment.distanceKilometers - location.distanceFromSegmentStart,
-            passedStations: Array(routeSegments.prefix(location.segmentIndex + 1).map(\.from))
+            passedStations: Array(routeSegments.prefix(location.segmentIndex + 1).map(\.from)),
+            recentPassedStations: recentPassedStations(
+                for: normalizedTotalDistance,
+                startingAt: startingStation,
+                direction: direction
+            )
         )
+    }
+
+    static func recentPassedStations(
+        for totalDistanceKilometers: Double,
+        limit: Int = 5,
+        startingAt startingStation: YamanoteStation = station("東京"),
+        direction: YamanoteRouteDirection = .inner
+    ) -> [YamanoteStation] {
+        let normalizedDistance = max(0, totalDistanceKilometers)
+        guard normalizedDistance > 0, Self.totalDistanceKilometers > 0, limit > 0 else {
+            return []
+        }
+
+        let routeSegments = routeSegments(startingAt: startingStation, direction: direction)
+        let stationMilestones = milestones(for: routeSegments)
+        let lastLap = Int(normalizedDistance / Self.totalDistanceKilometers)
+        let epsilon = 0.000_001
+        var passedStations: [YamanoteStation] = []
+
+        for lap in 0...lastLap {
+            let lapStartDistance = Double(lap) * Self.totalDistanceKilometers
+
+            for milestone in stationMilestones {
+                let milestoneDistance = lapStartDistance + milestone.distanceKilometers
+                if milestoneDistance <= normalizedDistance + epsilon {
+                    passedStations.append(milestone.station)
+                }
+            }
+        }
+
+        return Array(passedStations.suffix(limit))
     }
 
     static func passedStations(

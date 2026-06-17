@@ -221,6 +221,10 @@ struct HomeView: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(.green)
 
+            if !routeProgress.recentPassedStations.isEmpty {
+                RecentPassedStationsStrip(stations: routeProgress.recentPassedStations)
+            }
+
             if let event = appStateStore.lastDistanceSyncEvent {
                 SyncEventSummary(event: event, formattedKilometers: formattedKilometers)
             }
@@ -371,6 +375,38 @@ private struct MetricTile: View {
         .padding(.horizontal, 8)
         .background(.green.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+private struct RecentPassedStationsStrip: View {
+    let stations: [YamanoteStation]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("直前に通過した駅")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(stations) { station in
+                        Text(station.name)
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                            .padding(.horizontal, 8)
+                            .frame(minWidth: chipWidth(for: station), minHeight: 28)
+                            .background(.green.opacity(0.08))
+                            .foregroundStyle(.green)
+                            .clipShape(RoundedRectangle(cornerRadius: 7))
+                    }
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func chipWidth(for station: YamanoteStation) -> CGFloat {
+        station.name.count >= 6 ? 112 : 64
     }
 }
 
