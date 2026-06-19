@@ -6,7 +6,7 @@ struct HomeView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     @ObservedObject var appStateStore: AppStateStore
-    @State private var dashboardPage = 0
+    @State private var progressDisplayMode: ProgressDisplayMode = .percent
 
     private var usesCompactHeightLayout: Bool {
         verticalSizeClass == .compact
@@ -79,6 +79,7 @@ struct HomeView: View {
         )
         if let distanceKilometers = todayDistanceViewModel.distanceKilometers {
             appStateStore.syncTodayDistance(distanceKilometers)
+            appStateStore.syncHistoryRecords(todayDistanceViewModel.recentDailyDistances)
         } else if let errorMessage = todayDistanceViewModel.errorMessage {
             appStateStore.failDistanceRefresh(message: errorMessage)
         } else {
@@ -108,12 +109,8 @@ struct HomeView: View {
                 }
             }
         } else {
-            TabView(selection: $dashboardPage) {
-                statsPage.tag(0)
-                lineagePage.tag(1)
-            }
-            .tabViewStyle(.page(indexDisplayMode: .always))
-            .frame(height: 284)
+            statsPage
+                .frame(height: 258)
         }
     }
 
@@ -121,20 +118,17 @@ struct HomeView: View {
         VStack(spacing: 12) {
             ProgressRing(
                 progress: routeProgress.progressInCurrentLap,
-                label: progressPercentText,
-                caption: "\(routeProgress.currentLapNumber)周目"
+                label: progressRingLabel,
+                caption: progressRingCaption,
+                accessibilityLabel: progressRingAccessibilityLabel
             )
+            .onTapGesture { toggleProgressDisplayMode() }
             .frame(width: 136, height: 136)
             .frame(maxWidth: .infinity, alignment: .center)
 
             progressMetricGrid
         }
         .padding(.bottom, 18)
-    }
-
-    private var lineagePage: some View {
-        YamanoteLineageView(routeProgress: routeProgress)
-            .padding(.bottom, 18)
     }
 
     @ViewBuilder
@@ -199,9 +193,11 @@ struct HomeView: View {
     private func progressRing(size: CGFloat) -> some View {
         ProgressRing(
             progress: routeProgress.progressInCurrentLap,
-            label: progressPercentText,
-            caption: "\(routeProgress.currentLapNumber)周目"
+            label: progressRingLabel,
+            caption: progressRingCaption,
+            accessibilityLabel: progressRingAccessibilityLabel
         )
+        .onTapGesture { toggleProgressDisplayMode() }
         .frame(width: size, height: size)
     }
 
@@ -321,6 +317,41 @@ struct HomeView: View {
         routeProgress.progressInCurrentLap.formatted(.percent.precision(.fractionLength(0)))
     }
 
+    private var passedStationsFractionText: String {
+        "\(passedStationCountInCurrentLap) / \(YamanoteStation.all.count)"
+    }
+
+    private var passedStationCountInCurrentLap: Int {
+        max(0, routeProgress.passedStations.count - 1)
+    }
+
+    private var progressRingLabel: String {
+        switch progressDisplayMode {
+        case .percent:
+            return progressPercentText
+        case .stations:
+            return passedStationsFractionText
+        }
+    }
+
+    private var progressRingCaption: String {
+        switch progressDisplayMode {
+        case .percent:
+            return "\(routeProgress.currentLapNumber)周目"
+        case .stations:
+            return "通過駅"
+        }
+    }
+
+    private var progressRingAccessibilityLabel: String {
+        switch progressDisplayMode {
+        case .percent:
+            return "一周達成率 \(progressPercentText)、\(routeProgress.currentLapNumber)周目。タップで通過駅数を表示"
+        case .stations:
+            return "通過駅数 \(passedStationsFractionText)。タップで達成率を表示"
+        }
+    }
+
     private var segmentProgressText: String {
         routeProgress.progressInCurrentSegment.formatted(.percent.precision(.fractionLength(0)))
     }
@@ -332,12 +363,22 @@ struct HomeView: View {
     private func formattedKilometers(_ distanceKilometers: Double) -> String {
         "\(distanceKilometers.formatted(.number.precision(.fractionLength(1))))km"
     }
+
+    private func toggleProgressDisplayMode() {
+        progressDisplayMode = progressDisplayMode == .percent ? .stations : .percent
+    }
+}
+
+private enum ProgressDisplayMode {
+    case percent
+    case stations
 }
 
 private struct ProgressRing: View {
     let progress: Double
     let label: String
     let caption: String
+    let accessibilityLabel: String
 
     var body: some View {
         ZStack {
@@ -366,7 +407,7 @@ private struct ProgressRing: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("一周達成率 \(label)、\(caption)")
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 

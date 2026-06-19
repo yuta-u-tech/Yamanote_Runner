@@ -180,6 +180,21 @@ final class AppStateStore: ObservableObject {
         distanceRefreshState = .succeeded(date: date)
     }
 
+    func syncHistoryRecords(_ dailyDistances: [DailyWalkingRunningDistance], updatedAt: Date = Date()) {
+        guard !dailyDistances.isEmpty else { return }
+
+        for dailyDistance in dailyDistances {
+            upsertHistoryRecord(
+                date: dailyDistance.date,
+                distanceKilometers: dailyDistance.kilometers,
+                updatedAt: updatedAt
+            )
+        }
+
+        historyRecords.sort { $0.date > $1.date }
+        saveHistoryRecords()
+    }
+
     func failDistanceRefresh(message: String) {
         distanceRefreshState = .failed(message: message)
     }
@@ -266,6 +281,38 @@ final class AppStateStore: ObservableObject {
         historyRecords.append(record)
         historyRecords.sort { $0.date > $1.date }
         saveHistoryRecords()
+    }
+
+    private func upsertHistoryRecord(
+        date: Date,
+        distanceKilometers: Double,
+        updatedAt: Date
+    ) {
+        let dayStart = calendar.startOfDay(for: date)
+        let id = historyRecordID(for: dayStart)
+        let normalizedDistance = max(0, distanceKilometers)
+        let dailyProgress = YamanoteRoute.progress(
+            for: normalizedDistance,
+            startingAt: startingStation,
+            direction: selectedDirection
+        )
+        let record = DailyRunHistoryRecord(
+            id: id,
+            date: dayStart,
+            distanceKilometers: normalizedDistance,
+            passedStationNames: YamanoteRoute.passedStations(
+                from: 0,
+                to: normalizedDistance,
+                startingAt: startingStation,
+                direction: selectedDirection
+            ).map(\.name),
+            reachedStationName: dailyProgress.currentSegment.from.name,
+            currentLapNumber: dailyProgress.currentLapNumber,
+            updatedAt: updatedAt
+        )
+
+        historyRecords.removeAll { $0.id == id }
+        historyRecords.append(record)
     }
 
     private func saveHistoryRecords() {

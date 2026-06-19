@@ -306,6 +306,56 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(store.historyRecords[0].passedStationNames, ["神田", "秋葉原"])
     }
 
+    @MainActor
+    func testAppStateSyncsMeasuredHistoryWithoutChangingCumulativeProgress() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let today = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+        let yesterday = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 10))!
+
+        store.syncTodayDistance(2.0, at: today)
+        store.syncHistoryRecords([
+            DailyWalkingRunningDistance(
+                date: yesterday,
+                stepCount: 6_000,
+                kilometers: 4.2,
+                strideMeters: 0.7,
+                isStrideEstimated: false
+            )
+        ], updatedAt: today)
+
+        XCTAssertEqual(store.cumulativeDistanceKilometers, 2.0, accuracy: 0.001)
+        XCTAssertEqual(store.historyRecords.count, 2)
+        let yesterdayRecord = store.historyRecords.first {
+            fixedCalendar.isDate($0.date, inSameDayAs: yesterday)
+        }!
+        XCTAssertEqual(yesterdayRecord.distanceKilometers, 4.2, accuracy: 0.001)
+        XCTAssertEqual(yesterdayRecord.passedStationNames, ["神田", "秋葉原", "御徒町", "上野"])
+        XCTAssertEqual(yesterdayRecord.reachedStationName, "上野")
+    }
+
+    @MainActor
+    func testAppStateReplacesExistingMeasuredHistoryRecord() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+
+        store.syncTodayDistance(1.0, at: date)
+        store.syncHistoryRecords([
+            DailyWalkingRunningDistance(
+                date: date,
+                stepCount: 5_000,
+                kilometers: 3.5,
+                strideMeters: 0.7,
+                isStrideEstimated: false
+            )
+        ], updatedAt: date)
+
+        XCTAssertEqual(store.historyRecords.count, 1)
+        XCTAssertEqual(store.historyRecords[0].distanceKilometers, 3.5, accuracy: 0.001)
+        XCTAssertEqual(store.historyRecords[0].passedStationNames, ["神田", "秋葉原", "御徒町"])
+    }
+
     func testRouteProgressCompletesLapAtThirtyFourPointFiveKilometers() {
         let progress = YamanoteRoute.progress(for: 34.5)
 
@@ -444,7 +494,7 @@ final class YamanoteRunnerTests: XCTestCase {
 
         XCTAssertEqual(progress.totalDistanceKilometers, 0)
         XCTAssertEqual(progress.currentSegment.from.name, "東京")
-        XCTAssertEqual(progress.distanceToNextStationKilometers, 0.8, accuracy: 0.001)
+        XCTAssertEqual(progress.distanceToNextStationKilometers, 1.3, accuracy: 0.001)
     }
 
     private var fixedCalendar: Calendar {

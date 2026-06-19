@@ -65,6 +65,43 @@ final class HealthDistanceService {
         now: Date = Date(),
         heightCentimeters: Double? = nil
     ) async throws -> DailyWalkingRunningDistance {
+        try await walkingRunningDistance(
+            from: calendar.startOfDay(for: now),
+            to: now,
+            heightCentimeters: heightCentimeters
+        )
+    }
+
+    func recentDailyWalkingRunningDistances(
+        days: Int = 7,
+        endingAt now: Date = Date(),
+        heightCentimeters: Double? = nil
+    ) async throws -> [DailyWalkingRunningDistance] {
+        let boundedDays = max(1, days)
+        let today = calendar.startOfDay(for: now)
+
+        var distances: [DailyWalkingRunningDistance] = []
+        for offset in (0..<boundedDays).reversed() {
+            let start = calendar.date(byAdding: .day, value: -offset, to: today) ?? today
+            let end = offset == 0
+                ? now
+                : calendar.date(byAdding: .day, value: 1, to: start) ?? now
+            let distance = try await walkingRunningDistance(
+                from: start,
+                to: end,
+                heightCentimeters: heightCentimeters
+            )
+            distances.append(distance)
+        }
+
+        return distances
+    }
+
+    private func walkingRunningDistance(
+        from startDate: Date,
+        to endDate: Date,
+        heightCentimeters: Double? = nil
+    ) async throws -> DailyWalkingRunningDistance {
         guard HKHealthStore.isHealthDataAvailable() else {
             throw HealthDistanceError.unavailable
         }
@@ -77,10 +114,9 @@ final class HealthDistanceService {
             throw HealthDistanceError.distanceTypeUnavailable
         }
 
-        let startOfDay = calendar.startOfDay(for: now)
         let predicate = HKQuery.predicateForSamples(
-            withStart: startOfDay,
-            end: now,
+            withStart: startDate,
+            end: endDate,
             options: [.strictStartDate]
         )
         let stepCount = Int(
@@ -102,7 +138,7 @@ final class HealthDistanceService {
         )
 
         return DailyWalkingRunningDistance(
-            date: now,
+            date: calendar.startOfDay(for: startDate),
             stepCount: stepCount,
             kilometers: kilometers,
             strideMeters: stride.meters,
@@ -130,6 +166,7 @@ final class TodayDistanceViewModel: ObservableObject {
     @Published private(set) var stepCount: Int?
     @Published private(set) var strideMeters: Double?
     @Published private(set) var isStrideEstimated = true
+    @Published private(set) var recentDailyDistances: [DailyWalkingRunningDistance] = []
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
 
@@ -167,11 +204,15 @@ final class TodayDistanceViewModel: ObservableObject {
             stepCount = distance.stepCount
             strideMeters = distance.strideMeters
             isStrideEstimated = distance.isStrideEstimated
+            recentDailyDistances = (try? await distanceService.recentDailyWalkingRunningDistances(
+                heightCentimeters: heightCentimeters
+            )) ?? []
         } catch {
             distanceKilometers = nil
             stepCount = nil
             strideMeters = nil
             isStrideEstimated = true
+            recentDailyDistances = []
             errorMessage = error.localizedDescription
         }
 
