@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		A10000000000000000000010 /* YamanoteRunnerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000020 /* YamanoteRunnerApp.swift */; };
 		A10000000000000000000011 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* HomeView.swift */; };
+		A10000000000000000000093 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000092 /* MainTabView.swift */; };
 		A10000000000000000000012 /* YamanoteRunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* YamanoteRunnerTests.swift */; };
 		A10000000000000000000013 /* YamanoteStation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000023 /* YamanoteStation.swift */; };
 		A10000000000000000000014 /* RunnerBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000024 /* RunnerBadge.swift */; };
@@ -40,6 +41,7 @@
 /* Begin PBXFileReference section */
 		A10000000000000000000020 /* YamanoteRunnerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YamanoteRunnerApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000021 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		A10000000000000000000092 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		A10000000000000000000022 /* YamanoteRunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YamanoteRunnerTests.swift; sourceTree = "<group>"; };
 		A10000000000000000000023 /* YamanoteStation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YamanoteStation.swift; sourceTree = "<group>"; };
 		A10000000000000000000024 /* RunnerBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerBadge.swift; sourceTree = "<group>"; };
@@ -158,6 +160,7 @@
 				A10000000000000000000028 /* BadgeView.swift */,
 				A1000000000000000000002A /* HealthPermissionView.swift */,
 				A10000000000000000000021 /* HomeView.swift */,
+				A10000000000000000000092 /* MainTabView.swift */,
 				A10000000000000000000033 /* YamanoteLineageView.swift */,
 				A10000000000000000000034 /* HistoryView.swift */,
 			);
@@ -314,6 +317,7 @@
 				A1000000000000000000001D /* AppStateStore.swift in Sources */,
 				A1000000000000000000001F /* DirectionSelectionView.swift in Sources */,
 				A10000000000000000000011 /* HomeView.swift in Sources */,
+				A10000000000000000000093 /* MainTabView.swift in Sources */,
 				A10000000000000000000090 /* YamanoteLineageView.swift in Sources */,
 				A10000000000000000000091 /* HistoryView.swift in Sources */,
 			);

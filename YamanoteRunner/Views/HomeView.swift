@@ -18,25 +18,14 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: usesCompactHeightLayout ? 10 : 14) {
-                    if usesCompactHeightLayout {
-                        HStack(alignment: .top, spacing: 12) {
-                            progressDashboard
-                            currentLocationPanel
-                        }
-                    } else {
-                        progressDashboard
-                        currentLocationPanel
-                    }
-
-                    actionLinks
+            Group {
+                if usesCompactHeightLayout {
+                    compactLayout
+                } else {
+                    portraitLayout
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 10)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
                 LinearGradient(
                     colors: [
@@ -71,6 +60,65 @@ struct HomeView: View {
         }
     }
 
+    private var portraitLayout: some View {
+        VStack(spacing: 16) {
+            Spacer(minLength: 0)
+
+            ProgressRing(
+                progress: routeProgress.progressInCurrentLap,
+                label: progressRingLabel,
+                caption: progressRingCaption,
+                accessibilityLabel: progressRingAccessibilityLabel
+            )
+            .onTapGesture { toggleProgressDisplayMode() }
+            .frame(width: 180, height: 180)
+
+            HStack(spacing: 10) {
+                MetricTile(title: "今日", value: todayDistanceText, symbol: "figure.walk")
+                MetricTile(title: "累計", value: formattedKilometers(appStateStore.cumulativeDistanceKilometers), symbol: "sum")
+            }
+
+            currentLocationPanel
+
+            HStack(spacing: 6) {
+                Image(systemName: "tram.fill")
+                    .font(.caption2)
+                Text(appStateStore.startingStation.name)
+                Text("·")
+                Text(appStateStore.selectedDirection.rawValue)
+            }
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var compactLayout: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ProgressRing(
+                progress: routeProgress.progressInCurrentLap,
+                label: progressRingLabel,
+                caption: progressRingCaption,
+                accessibilityLabel: progressRingAccessibilityLabel
+            )
+            .onTapGesture { toggleProgressDisplayMode() }
+            .frame(width: 110, height: 110)
+
+            VStack(spacing: 10) {
+                currentLocationPanel
+
+                HStack(spacing: 8) {
+                    MetricTile(title: "今日", value: todayDistanceText, symbol: "figure.walk")
+                    MetricTile(title: "累計", value: formattedKilometers(appStateStore.cumulativeDistanceKilometers), symbol: "sum")
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
     private func refreshTodayDistance() async {
         guard !appStateStore.distanceRefreshState.isLoading else { return }
         appStateStore.beginDistanceRefresh()
@@ -85,120 +133,6 @@ struct HomeView: View {
         } else {
             appStateStore.failDistanceRefresh(message: "距離を取得できませんでした。")
         }
-    }
-
-    private var progressDashboard: some View {
-        dashboardContent
-            .padding(12)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(.green.opacity(0.12), lineWidth: 1)
-            }
-            .frame(maxWidth: .infinity, alignment: .top)
-    }
-
-    @ViewBuilder
-    private var dashboardContent: some View {
-        if usesCompactHeightLayout {
-            HStack(alignment: .center, spacing: 12) {
-                progressRing(size: 112)
-                VStack(spacing: 8) {
-                    progressMetricTiles
-                }
-            }
-        } else {
-            statsPage
-                .frame(height: 258)
-        }
-    }
-
-    private var statsPage: some View {
-        VStack(spacing: 12) {
-            ProgressRing(
-                progress: routeProgress.progressInCurrentLap,
-                label: progressRingLabel,
-                caption: progressRingCaption,
-                accessibilityLabel: progressRingAccessibilityLabel
-            )
-            .onTapGesture { toggleProgressDisplayMode() }
-            .frame(width: 136, height: 136)
-            .frame(maxWidth: .infinity, alignment: .center)
-
-            progressMetricGrid
-        }
-        .padding(.bottom, 18)
-    }
-
-    @ViewBuilder
-    private var progressMetricTiles: some View {
-        MetricTile(
-            title: "今日",
-            value: todayDistanceText,
-            symbol: "figure.walk"
-        )
-
-        MetricTile(
-            title: "歩数",
-            value: todayStepCountText,
-            symbol: "shoeprints.fill"
-        )
-
-        MetricTile(
-            title: "累計",
-            value: formattedKilometers(appStateStore.cumulativeDistanceKilometers),
-            symbol: "sum"
-        )
-
-        MetricTile(
-            title: "\(routeProgress.currentLapNumber)周目",
-            value: lapProgressText,
-            symbol: "arrow.triangle.2.circlepath"
-        )
-    }
-
-    private var progressMetricGrid: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                MetricTile(
-                    title: "今日",
-                    value: todayDistanceText,
-                    symbol: "figure.walk"
-                )
-
-                MetricTile(
-                    title: "歩数",
-                    value: todayStepCountText,
-                    symbol: "shoeprints.fill"
-                )
-            }
-
-            HStack(spacing: 8) {
-                MetricTile(
-                    title: "累計",
-                    value: formattedKilometers(appStateStore.cumulativeDistanceKilometers),
-                    symbol: "sum"
-                )
-
-                MetricTile(
-                    title: "\(routeProgress.currentLapNumber)周目",
-                    value: lapProgressText,
-                    symbol: "arrow.triangle.2.circlepath"
-                )
-            }
-        }
-    }
-
-    private func progressRing(size: CGFloat) -> some View {
-        ProgressRing(
-            progress: routeProgress.progressInCurrentLap,
-            label: progressRingLabel,
-            caption: progressRingCaption,
-            accessibilityLabel: progressRingAccessibilityLabel
-        )
-        .onTapGesture { toggleProgressDisplayMode() }
-        .frame(width: size, height: size)
     }
 
     private var currentLocationPanel: some View {
@@ -227,26 +161,6 @@ struct HomeView: View {
                 }
             }
 
-            HStack {
-                Text("進行方向")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                Text(appStateStore.selectedDirection.rawValue)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.green)
-            }
-
-            HStack(spacing: 8) {
-                Label(appStateStore.startingStation.name, systemImage: "tram.fill")
-                Spacer()
-                Label(appStateStore.selectedDirection.rawValue, systemImage: "arrow.triangle.2.circlepath")
-            }
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.green)
-
             SegmentProgressBar(
                 progress: routeProgress.progressInCurrentSegment,
                 fromStationName: routeProgress.currentSegment.from.name,
@@ -268,49 +182,12 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .top)
     }
 
-    private var actionLinks: some View {
-        VStack(spacing: 10) {
-            NavigationLink {
-                BadgeView(badges: RunnerBadge.all(unlockedBadgeIDs: appStateStore.unlockedBadgeIDs))
-            } label: {
-                CompactActionButton(symbol: "medal.fill", title: "バッジ")
-            }
-
-            NavigationLink {
-                HistoryView(records: appStateStore.historyRecords)
-            } label: {
-                CompactActionButton(symbol: "clock.arrow.circlepath", title: "履歴")
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
     private var todayDistanceText: String {
         guard let distanceKilometers = todayDistanceViewModel.distanceKilometers else {
             return appStateStore.distanceRefreshState.isLoading ? "取得中" : "--km"
         }
 
         return formattedKilometers(distanceKilometers)
-    }
-
-    private var todayStepCountText: String {
-        guard let stepCount = todayDistanceViewModel.stepCount else {
-            return appStateStore.distanceRefreshState.isLoading ? "取得中" : "--歩"
-        }
-
-        return "\(stepCount.formatted())歩"
-    }
-
-    private var strideText: String {
-        guard let strideMeters = todayDistanceViewModel.strideMeters else {
-            let fallbackStride = StepDistanceEstimator(
-                heightCentimeters: appStateStore.heightCentimeters
-            ).estimatedStrideMeters
-            return "\((fallbackStride * 100).formatted(.number.precision(.fractionLength(1))))cm"
-        }
-
-        let centimeters = strideMeters * 100
-        return "\(centimeters.formatted(.number.precision(.fractionLength(1))))cm"
     }
 
     private var progressPercentText: String {
@@ -354,10 +231,6 @@ struct HomeView: View {
 
     private var segmentProgressText: String {
         routeProgress.progressInCurrentSegment.formatted(.percent.precision(.fractionLength(0)))
-    }
-
-    private var lapProgressText: String {
-        routeProgress.progressInCurrentLap.formatted(.percent.precision(.fractionLength(0)))
     }
 
     private func formattedKilometers(_ distanceKilometers: Double) -> String {
@@ -559,34 +432,6 @@ private struct SyncEventSummary: View {
         }
 
         return "現在区間を進行中"
-    }
-}
-
-private struct CompactActionButton: View {
-    let symbol: String
-    let title: String
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: symbol)
-                .font(.headline)
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 12)
-        .frame(maxWidth: .infinity, minHeight: 48)
-        .background(.regularMaterial)
-        .foregroundStyle(.primary)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(.green.opacity(0.12), lineWidth: 1)
-        }
     }
 }
 

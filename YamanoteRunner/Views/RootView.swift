@@ -9,9 +9,7 @@ struct RootView: View {
         Group {
             if appStateStore.hasCompletedInitialSetup {
                 if healthKitAuthorizationService.authorizationState == .authorized {
-                    HomeView(
-                        appStateStore: appStateStore
-                    )
+                    MainTabView(appStateStore: appStateStore)
                 } else {
                     HealthPermissionView(
                         authorizationState: healthKitAuthorizationService.authorizationState,
