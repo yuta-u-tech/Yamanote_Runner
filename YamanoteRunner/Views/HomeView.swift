@@ -61,38 +61,31 @@ struct HomeView: View {
     }
 
     private var portraitLayout: some View {
-        VStack(spacing: 16) {
-            Spacer(minLength: 0)
+        GeometryReader { geo in
+            let ringSize = min(200, geo.size.height * 0.30)
 
-            ProgressRing(
-                progress: routeProgress.progressInCurrentLap,
-                label: progressRingLabel,
-                caption: progressRingCaption,
-                accessibilityLabel: progressRingAccessibilityLabel
-            )
-            .onTapGesture { toggleProgressDisplayMode() }
-            .frame(width: 180, height: 180)
+            VStack(spacing: 12) {
+                ProgressRing(
+                    progress: routeProgress.progressInCurrentLap,
+                    label: progressRingLabel,
+                    caption: progressRingCaption,
+                    accessibilityLabel: progressRingAccessibilityLabel
+                )
+                .onTapGesture { toggleProgressDisplayMode() }
+                .frame(width: ringSize, height: ringSize)
 
-            HStack(spacing: 10) {
-                MetricTile(title: "今日", value: todayDistanceText, symbol: "figure.walk")
-                MetricTile(title: "累計", value: formattedKilometers(appStateStore.cumulativeDistanceKilometers), symbol: "sum")
+                HStack(spacing: 10) {
+                    MetricTile(title: "今日", value: todayDistanceText, symbol: "figure.walk")
+                    MetricTile(title: "累計", value: formattedKilometers(appStateStore.cumulativeDistanceKilometers), symbol: "sum")
+                }
+
+                locationCard
+                    .frame(maxHeight: .infinity, alignment: .top)
             }
-
-            currentLocationPanel
-
-            HStack(spacing: 6) {
-                Image(systemName: "tram.fill")
-                    .font(.caption2)
-                Text(appStateStore.startingStation.name)
-                Text("·")
-                Text(appStateStore.selectedDirection.rawValue)
-            }
-            .font(.caption)
-            .foregroundStyle(.tertiary)
-
-            Spacer(minLength: 0)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 8)
         }
-        .padding(.horizontal, 16)
     }
 
     private var compactLayout: some View {
@@ -107,7 +100,7 @@ struct HomeView: View {
             .frame(width: 110, height: 110)
 
             VStack(spacing: 10) {
-                currentLocationPanel
+                locationCard
 
                 HStack(spacing: 8) {
                     MetricTile(title: "今日", value: todayDistanceText, symbol: "figure.walk")
@@ -135,31 +128,10 @@ struct HomeView: View {
         }
     }
 
-    private var currentLocationPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("現在")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("\(routeProgress.currentSegment.from.name)〜\(routeProgress.currentSegment.to.name)")
-                        .font(.title3.weight(.bold))
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.78)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("次の駅まで")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("あと\(formattedKilometers(routeProgress.distanceToNextStationKilometers))")
-                        .font(.headline)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.78)
-                }
-            }
+    private var locationCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            stationHeader
+                .padding(.bottom, 12)
 
             SegmentProgressBar(
                 progress: routeProgress.progressInCurrentSegment,
@@ -170,7 +142,23 @@ struct HomeView: View {
 
             if let event = appStateStore.lastDistanceSyncEvent {
                 SyncEventSummary(event: event, formattedKilometers: formattedKilometers)
+                    .padding(.top, 4)
             }
+
+            Spacer(minLength: 12)
+
+            Divider()
+                .padding(.bottom, 8)
+
+            HStack(spacing: 6) {
+                Image(systemName: "tram.fill")
+                    .font(.caption2)
+                Text(appStateStore.startingStation.name)
+                Text("·")
+                Text(appStateStore.selectedDirection.rawValue)
+            }
+            .font(.caption)
+            .foregroundStyle(.tertiary)
         }
         .padding(12)
         .background(.regularMaterial)
@@ -179,7 +167,33 @@ struct HomeView: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(.green.opacity(0.12), lineWidth: 1)
         }
-        .frame(maxWidth: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity)
+    }
+
+    private var stationHeader: some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("現在")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("\(routeProgress.currentSegment.from.name)〜\(routeProgress.currentSegment.to.name)")
+                    .font(.title3.weight(.bold))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.78)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("次の駅まで")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("あと\(formattedKilometers(routeProgress.distanceToNextStationKilometers))")
+                    .font(.headline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+        }
     }
 
     private var todayDistanceText: String {
