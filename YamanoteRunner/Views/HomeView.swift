@@ -155,14 +155,15 @@ struct HomeView: View {
             }
 
             Divider()
-                .padding(.vertical, 8)
+                .padding(.top, 8)
 
-            upcomingStationsSection
-
-            Spacer(minLength: 8)
+            StationScrollList(
+                entries: stationEntries(),
+                nextStationID: routeProgress.currentSegment.to.id
+            )
+            .frame(maxHeight: .infinity)
 
             Divider()
-                .padding(.bottom, 8)
 
             HStack(spacing: 6) {
                 Image(systemName: "tram.fill")
@@ -173,6 +174,7 @@ struct HomeView: View {
             }
             .font(.caption)
             .foregroundStyle(.tertiary)
+            .padding(.top, 8)
         }
         .padding(12)
         .background(.regularMaterial)
@@ -184,28 +186,24 @@ struct HomeView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var upcomingStationsSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("次の通過駅")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .padding(.bottom, 6)
+    private func stationEntries() -> [StationListEntry] {
+        let allStations = YamanoteRoute.allStations(
+            startingAt: appStateStore.startingStation,
+            direction: appStateStore.selectedDirection
+        )
+        let passedSet = Set(routeProgress.passedStations.map(\.id))
+        let nextID = routeProgress.currentSegment.to.id
 
-            ForEach(appStateStore.upcomingStations, id: \.station.id) { item in
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(.green.opacity(0.5))
-                        .frame(width: 5, height: 5)
-                    Text(item.station.name)
-                        .font(.caption)
-                    Spacer()
-                    Text(formattedKilometers(item.distanceKilometers))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-                .padding(.vertical, 4)
+        return allStations.map { station in
+            let status: StationStatus
+            if passedSet.contains(station.id) {
+                status = .passed
+            } else if station.id == nextID {
+                status = .next
+            } else {
+                status = .upcoming
             }
+            return StationListEntry(station: station, status: status)
         }
     }
 
@@ -641,6 +639,98 @@ private struct SettingsValueRow: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+        }
+    }
+}
+
+private enum StationStatus {
+    case passed, next, upcoming
+}
+
+private struct StationListEntry: Identifiable {
+    let station: YamanoteStation
+    let status: StationStatus
+    var id: String { station.id }
+}
+
+private struct StationScrollList: View {
+    let entries: [StationListEntry]
+    let nextStationID: String
+
+    @State private var resetTask: Task<Void, Never>?
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                LazyVStack(spacing: 0) {
+                    ForEach(entries) { entry in
+                        StationRow(entry: entry)
+                            .id(entry.id)
+                    }
+                }
+            }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { _ in resetTask?.cancel() }
+                    .onEnded { _ in scheduleReset(proxy: proxy) }
+            )
+            .task {
+                try? await Task.sleep(for: .milliseconds(80))
+                proxy.scrollTo(nextStationID, anchor: .center)
+            }
+            .onChange(of: nextStationID) { _, id in
+                withAnimation {
+                    proxy.scrollTo(id, anchor: .center)
+                }
+            }
+        }
+    }
+
+    private func scheduleReset(proxy: ScrollViewProxy) {
+        resetTask?.cancel()
+        resetTask = Task {
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    proxy.scrollTo(nextStationID, anchor: .center)
+                }
+            }
+        }
+    }
+}
+
+private struct StationRow: View {
+    let entry: StationListEntry
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(dotColor)
+                .frame(width: 6, height: 6)
+            Text(entry.station.name)
+                .font(entry.status == .next ? .caption.weight(.bold) : .caption)
+                .foregroundStyle(entry.status == .passed ? .secondary : .primary)
+            Spacer()
+        }
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(rowBackground)
+    }
+
+    private var dotColor: Color {
+        switch entry.status {
+        case .passed:   return Color(.systemGray3)
+        case .next:     return .green
+        case .upcoming: return Color(.systemGray4)
+        }
+    }
+
+    private var rowBackground: Color {
+        switch entry.status {
+        case .passed:   return Color(.systemGray6)
+        case .next:     return Color.green.opacity(0.12)
+        case .upcoming: return .clear
         }
     }
 }

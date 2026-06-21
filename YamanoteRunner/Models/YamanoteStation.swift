@@ -152,6 +152,13 @@ enum YamanoteRoute {
         )
     }
 
+    static func allStations(
+        startingAt startingStation: YamanoteStation,
+        direction: YamanoteRouteDirection
+    ) -> [YamanoteStation] {
+        routeSegments(startingAt: startingStation, direction: direction).map(\.from)
+    }
+
     static func upcomingStations(
         from progress: YamanoteRouteProgress,
         startingAt startingStation: YamanoteStation,
