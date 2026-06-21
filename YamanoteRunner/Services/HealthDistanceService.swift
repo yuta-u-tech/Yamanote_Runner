@@ -218,4 +218,16 @@ final class TodayDistanceViewModel: ObservableObject {
 
         isLoading = false
     }
+
+    #if DEBUG
+    func loadDummyData(distanceKilometers: Double, stepCount: Int) {
+        self.distanceKilometers = distanceKilometers
+        self.stepCount = stepCount
+        self.strideMeters = nil
+        self.isStrideEstimated = true
+        self.recentDailyDistances = []
+        self.isLoading = false
+        self.errorMessage = nil
+    }
+    #endif
 }

@@ -95,6 +95,15 @@ final class AppStateStore: ObservableObject {
         YamanoteStation.named(startingStationName) ?? YamanoteStation.all[0]
     }
 
+    var upcomingStations: [(station: YamanoteStation, distanceKilometers: Double)] {
+        YamanoteRoute.upcomingStations(
+            from: routeProgress,
+            startingAt: startingStation,
+            direction: selectedDirection,
+            count: 3
+        )
+    }
+
     var routeProgress: YamanoteRouteProgress {
         YamanoteRoute.progress(
             for: cumulativeDistanceKilometers,

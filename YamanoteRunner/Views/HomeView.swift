@@ -115,6 +115,15 @@ struct HomeView: View {
     private func refreshTodayDistance() async {
         guard !appStateStore.distanceRefreshState.isLoading else { return }
         appStateStore.beginDistanceRefresh()
+
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-dummy") {
+            todayDistanceViewModel.loadDummyData(distanceKilometers: 3.2, stepCount: 4200)
+            appStateStore.syncTodayDistance(3.2)
+            return
+        }
+        #endif
+
         await todayDistanceViewModel.loadTodayDistance(
             heightCentimeters: appStateStore.heightCentimeters
         )
@@ -145,7 +154,12 @@ struct HomeView: View {
                     .padding(.top, 4)
             }
 
-            Spacer(minLength: 12)
+            Divider()
+                .padding(.vertical, 8)
+
+            upcomingStationsSection
+
+            Spacer(minLength: 8)
 
             Divider()
                 .padding(.bottom, 8)
@@ -168,6 +182,31 @@ struct HomeView: View {
                 .stroke(.green.opacity(0.12), lineWidth: 1)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private var upcomingStationsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("次の通過駅")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .padding(.bottom, 6)
+
+            ForEach(appStateStore.upcomingStations, id: \.station.id) { item in
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(.green.opacity(0.5))
+                        .frame(width: 5, height: 5)
+                    Text(item.station.name)
+                        .font(.caption)
+                    Spacer()
+                    Text(formattedKilometers(item.distanceKilometers))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                .padding(.vertical, 4)
+            }
+        }
     }
 
     private var stationHeader: some View {

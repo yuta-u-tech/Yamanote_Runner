@@ -152,6 +152,34 @@ enum YamanoteRoute {
         )
     }
 
+    static func upcomingStations(
+        from progress: YamanoteRouteProgress,
+        startingAt startingStation: YamanoteStation,
+        direction: YamanoteRouteDirection,
+        count: Int
+    ) -> [(station: YamanoteStation, distanceKilometers: Double)] {
+        let segments = routeSegments(startingAt: startingStation, direction: direction)
+        guard let currentIndex = segments.firstIndex(where: { $0 == progress.currentSegment }) else {
+            return []
+        }
+
+        var result: [(station: YamanoteStation, distanceKilometers: Double)] = []
+        var cumulativeDistance = progress.distanceToNextStationKilometers
+
+        for i in 0..<count {
+            let segmentIndex = (currentIndex + i) % segments.count
+            let segment = segments[segmentIndex]
+
+            if i > 0 {
+                cumulativeDistance += segment.distanceKilometers
+            }
+
+            result.append((segment.to, cumulativeDistance))
+        }
+
+        return result
+    }
+
     static func passedStations(
         from previousTotalDistanceKilometers: Double,
         to currentTotalDistanceKilometers: Double,
