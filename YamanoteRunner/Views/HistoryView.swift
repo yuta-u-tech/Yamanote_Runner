@@ -78,9 +78,8 @@ private struct ScrollableHistoryBarChart: View {
     var body: some View {
         GeometryReader { geometry in
             let visibleBarCount = 7.0
-            let horizontalPadding = 12.0
             let barSpacing = 6.0
-            let availableWidth = geometry.size.width - horizontalPadding * 2 - barSpacing * (visibleBarCount - 1)
+            let availableWidth = geometry.size.width - barSpacing * (visibleBarCount - 1)
             let barWidth = max(32, availableWidth / visibleBarCount)
 
             ScrollViewReader { proxy in
@@ -103,10 +102,10 @@ private struct ScrollableHistoryBarChart: View {
                             .animation(.easeInOut(duration: 0.18), value: isSelected)
                         }
                     }
-                    .padding(.horizontal, horizontalPadding)
                     .padding(.top, 10)
                     .padding(.bottom, 4)
                 }
+                .scrollTargetBehavior(.viewAligned)
                 .onAppear {
                     proxy.scrollTo(today, anchor: .trailing)
                 }
