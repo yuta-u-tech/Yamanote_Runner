@@ -1,3 +1,4 @@
+import CoreLocation
 import MapKit
 import SwiftUI
 
@@ -38,79 +39,62 @@ struct MainTabView: View {
 
 private struct YamanoteMapView: View {
     @ObservedObject var appStateStore: AppStateStore
+    @StateObject private var locationService = WalkingMapLocationService()
     @State private var cameraPosition: MapCameraPosition = .region(Self.defaultRegion)
+    @State private var goalCandidates: [WalkingGoalCandidate] = []
+    @State private var searchState: GoalSearchState = .idle
 
     private static let defaultRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 35.6812, longitude: 139.7671),
-        span: MKCoordinateSpan(latitudeDelta: 0.105, longitudeDelta: 0.125)
+        span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
     )
 
     private var progress: YamanoteRouteProgress {
         appStateStore.routeProgress
     }
 
-    private var routeStations: [YamanoteStation] {
-        YamanoteRoute.allStations(
-            startingAt: appStateStore.startingStation,
-            direction: appStateStore.selectedDirection
-        )
-    }
-
-    private var routeCoordinates: [CLLocationCoordinate2D] {
-        let coordinates = routeStations.compactMap { Self.stationCoordinates[$0.name] }
-        guard let firstCoordinate = coordinates.first else { return coordinates }
-        return coordinates + [firstCoordinate]
-    }
-
-    private var currentCoordinate: CLLocationCoordinate2D? {
-        guard let from = Self.stationCoordinates[progress.currentSegment.from.name],
-            let to = Self.stationCoordinates[progress.currentSegment.to.name]
-        else {
-            return nil
-        }
-
-        let fraction = min(max(progress.progressInCurrentSegment, 0), 1)
-        return CLLocationCoordinate2D(
-            latitude: from.latitude + (to.latitude - from.latitude) * fraction,
-            longitude: from.longitude + (to.longitude - from.longitude) * fraction
-        )
+    private var targetDistanceKilometers: Double {
+        progress.distanceToNextStationKilometers
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
+        ZStack(alignment: .bottom) {
             Map(position: $cameraPosition) {
-                MapPolyline(coordinates: routeCoordinates)
-                    .stroke(.green, lineWidth: 4)
+                UserAnnotation()
 
-                ForEach(routeStations) { station in
-                    if let coordinate = Self.stationCoordinates[station.name] {
-                        Marker(station.name, systemImage: stationSymbol(for: station), coordinate: coordinate)
-                            .tint(stationTint(for: station))
-                    }
-                }
-
-                if let currentCoordinate {
-                    Annotation("現在地", coordinate: currentCoordinate) {
-                        Image(systemName: "figure.walk.circle.fill")
-                            .font(.system(size: 30, weight: .semibold))
-                            .foregroundStyle(.green)
-                            .background(.background, in: Circle())
-                            .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
-                    }
+                ForEach(goalCandidates) { candidate in
+                    Marker(candidate.name, systemImage: candidate.symbolName, coordinate: candidate.coordinate)
+                        .tint(candidate.tint)
                 }
             }
             .mapControls {
+                MapUserLocationButton()
                 MapCompass()
                 MapScaleView()
             }
             .ignoresSafeArea(edges: .top)
 
-            mapSummary
-                .padding(.horizontal, 14)
-                .padding(.top, 12)
+            VStack(spacing: 10) {
+                mapSummary
+                goalCandidatePanel
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 12)
         }
         .navigationTitle("マップ")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            locationService.requestLocation()
+        }
+        .onChange(of: locationService.location) { _, location in
+            guard let location else { return }
+            centerMap(on: location.coordinate)
+            searchGoals(from: location)
+        }
+        .onChange(of: targetDistanceKilometers) { _, _ in
+            guard let location = locationService.location else { return }
+            searchGoals(from: location)
+        }
     }
 
     private var mapSummary: some View {
@@ -120,9 +104,9 @@ private struct YamanoteMapView: View {
                 .foregroundStyle(.green)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(progress.currentSegment.from.name)〜\(progress.currentSegment.to.name)")
+                Text("\(progress.currentSegment.to.name)まであと\(formattedKilometers(targetDistanceKilometers))")
                     .font(.subheadline.weight(.semibold))
-                Text("\(appStateStore.startingStation.name) · \(appStateStore.selectedDirection.rawValue) · \(progress.currentLapNumber)周目")
+                Text("同じ距離感で歩ける目的地を現在地から提案")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -134,62 +118,300 @@ private struct YamanoteMapView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
-    private func stationSymbol(for station: YamanoteStation) -> String {
-        if station.id == progress.startingStation.id {
-            return "flag.fill"
-        }
+    private var goalCandidatePanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("散歩ゴール候補", systemImage: "figure.walk")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                if searchState == .searching {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+            }
 
-        if station.id == progress.currentSegment.to.id {
-            return "tram.fill"
-        }
+            switch locationService.authorizationState {
+            case .notDetermined:
+                Button {
+                    locationService.requestLocation()
+                } label: {
+                    Label("現在地を使って探す", systemImage: "location.fill")
+                }
+                .buttonStyle(.borderedProminent)
 
-        return "circle.fill"
+            case .denied:
+                Text("位置情報を許可すると、今いる場所から\(progress.currentSegment.to.name)までの距離感に近い散歩先を探せます。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+            case .available:
+                if goalCandidates.isEmpty {
+                    Text(searchState.message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(goalCandidates.prefix(3)) { candidate in
+                        HStack(spacing: 8) {
+                            Image(systemName: candidate.symbolName)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(candidate.tint)
+                                .frame(width: 22, height: 22)
+                                .background(candidate.tint.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(candidate.name)
+                                    .font(.caption.weight(.semibold))
+                                    .lineLimit(1)
+                                Text("\(formattedMeters(candidate.distanceMeters)) · 目標との差 \(formattedMeters(candidate.distanceGapMeters))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+                        }
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
-    private func stationTint(for station: YamanoteStation) -> Color {
-        if station.id == progress.currentSegment.to.id {
+    private func centerMap(on coordinate: CLLocationCoordinate2D) {
+        withAnimation(.easeInOut(duration: 0.25)) {
+            cameraPosition = .region(
+                MKCoordinateRegion(
+                    center: coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
+                )
+            )
+        }
+    }
+
+    private func searchGoals(from location: CLLocation) {
+        searchState = .searching
+        Task {
+            do {
+                let candidates = try await WalkingGoalSearch.search(
+                    near: location.coordinate,
+                    targetDistanceKilometers: targetDistanceKilometers
+                )
+                await MainActor.run {
+                    goalCandidates = candidates
+                    searchState = candidates.isEmpty ? .empty : .idle
+                }
+            } catch {
+                await MainActor.run {
+                    goalCandidates = []
+                    searchState = .failed
+                }
+            }
+        }
+    }
+
+    private func formattedKilometers(_ kilometers: Double) -> String {
+        "\(kilometers.formatted(.number.precision(.fractionLength(1))))km"
+    }
+
+    private func formattedMeters(_ meters: CLLocationDistance) -> String {
+        let kilometers = meters / 1000
+        return "\(kilometers.formatted(.number.precision(.fractionLength(1))))km"
+    }
+}
+
+private enum LocationAuthorizationState {
+    case notDetermined
+    case denied
+    case available
+}
+
+private enum GoalSearchState: Equatable {
+    case idle
+    case searching
+    case empty
+    case failed
+
+    var message: String {
+        switch self {
+        case .idle:
+            return "現在地の近くから、次の駅までの距離感に近い目的地を探します。"
+        case .searching:
+            return "候補を検索中です。"
+        case .empty:
+            return "近い距離の候補が見つかりませんでした。"
+        case .failed:
+            return "候補を取得できませんでした。"
+        }
+    }
+}
+
+private struct WalkingGoalCandidate: Identifiable {
+    let id: String
+    let name: String
+    let category: WalkingGoalCategory
+    let coordinate: CLLocationCoordinate2D
+    let distanceMeters: CLLocationDistance
+    let distanceGapMeters: CLLocationDistance
+
+    var symbolName: String {
+        category.symbolName
+    }
+
+    var tint: Color {
+        category.tint
+    }
+}
+
+private enum WalkingGoalCategory: String, Hashable {
+    case cafe
+    case park
+
+    var query: String {
+        switch self {
+        case .cafe:
+            return "カフェ"
+        case .park:
+            return "公園"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .cafe:
+            return "cup.and.saucer.fill"
+        case .park:
+            return "tree.fill"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .cafe:
+            return .brown
+        case .park:
             return .green
         }
+    }
+}
 
-        if progress.passedStations.contains(where: { $0.id == station.id }) {
-            return .gray
-        }
+@MainActor
+private final class WalkingMapLocationService: NSObject, ObservableObject, CLLocationManagerDelegate {
+    @Published private(set) var authorizationState: LocationAuthorizationState = .notDetermined
+    @Published private(set) var location: CLLocation?
 
-        return .secondary
+    private let locationManager = CLLocationManager()
+
+    override init() {
+        super.init()
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        updateAuthorizationState(locationManager.authorizationStatus)
     }
 
-    private static let stationCoordinates: [String: CLLocationCoordinate2D] = [
-        "東京": CLLocationCoordinate2D(latitude: 35.681236, longitude: 139.767125),
-        "神田": CLLocationCoordinate2D(latitude: 35.691690, longitude: 139.770883),
-        "秋葉原": CLLocationCoordinate2D(latitude: 35.698683, longitude: 139.774219),
-        "御徒町": CLLocationCoordinate2D(latitude: 35.707438, longitude: 139.774632),
-        "上野": CLLocationCoordinate2D(latitude: 35.713768, longitude: 139.777254),
-        "鶯谷": CLLocationCoordinate2D(latitude: 35.721484, longitude: 139.778015),
-        "日暮里": CLLocationCoordinate2D(latitude: 35.727772, longitude: 139.770987),
-        "西日暮里": CLLocationCoordinate2D(latitude: 35.732135, longitude: 139.766787),
-        "田端": CLLocationCoordinate2D(latitude: 35.738062, longitude: 139.760860),
-        "駒込": CLLocationCoordinate2D(latitude: 35.736489, longitude: 139.746875),
-        "巣鴨": CLLocationCoordinate2D(latitude: 35.733492, longitude: 139.739345),
-        "大塚": CLLocationCoordinate2D(latitude: 35.731401, longitude: 139.728662),
-        "池袋": CLLocationCoordinate2D(latitude: 35.728926, longitude: 139.710380),
-        "目白": CLLocationCoordinate2D(latitude: 35.721204, longitude: 139.706587),
-        "高田馬場": CLLocationCoordinate2D(latitude: 35.712285, longitude: 139.703782),
-        "新大久保": CLLocationCoordinate2D(latitude: 35.701306, longitude: 139.700044),
-        "新宿": CLLocationCoordinate2D(latitude: 35.690921, longitude: 139.700258),
-        "代々木": CLLocationCoordinate2D(latitude: 35.683061, longitude: 139.702042),
-        "原宿": CLLocationCoordinate2D(latitude: 35.670168, longitude: 139.702687),
-        "渋谷": CLLocationCoordinate2D(latitude: 35.658034, longitude: 139.701636),
-        "恵比寿": CLLocationCoordinate2D(latitude: 35.646690, longitude: 139.710106),
-        "目黒": CLLocationCoordinate2D(latitude: 35.633998, longitude: 139.715828),
-        "五反田": CLLocationCoordinate2D(latitude: 35.626446, longitude: 139.723444),
-        "大崎": CLLocationCoordinate2D(latitude: 35.619700, longitude: 139.728553),
-        "品川": CLLocationCoordinate2D(latitude: 35.628471, longitude: 139.738760),
-        "高輪ゲートウェイ": CLLocationCoordinate2D(latitude: 35.635500, longitude: 139.740700),
-        "田町": CLLocationCoordinate2D(latitude: 35.645736, longitude: 139.747575),
-        "浜松町": CLLocationCoordinate2D(latitude: 35.655646, longitude: 139.756749),
-        "新橋": CLLocationCoordinate2D(latitude: 35.666195, longitude: 139.758587),
-        "有楽町": CLLocationCoordinate2D(latitude: 35.675069, longitude: 139.763328)
-    ]
+    func requestLocation() {
+        switch locationManager.authorizationStatus {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        case .authorizedAlways, .authorizedWhenInUse:
+            authorizationState = .available
+            locationManager.requestLocation()
+        case .denied, .restricted:
+            authorizationState = .denied
+        @unknown default:
+            authorizationState = .denied
+        }
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        Task { @MainActor in
+            updateAuthorizationState(manager.authorizationStatus)
+            if authorizationState == .available {
+                manager.requestLocation()
+            }
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        Task { @MainActor in
+            self.location = location
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        Task { @MainActor in
+            self.location = manager.location
+        }
+    }
+
+    private func updateAuthorizationState(_ status: CLAuthorizationStatus) {
+        switch status {
+        case .notDetermined:
+            authorizationState = .notDetermined
+        case .authorizedAlways, .authorizedWhenInUse:
+            authorizationState = .available
+        case .denied, .restricted:
+            authorizationState = .denied
+        @unknown default:
+            authorizationState = .denied
+        }
+    }
+}
+
+private enum WalkingGoalSearch {
+    static func search(
+        near coordinate: CLLocationCoordinate2D,
+        targetDistanceKilometers: Double
+    ) async throws -> [WalkingGoalCandidate] {
+        let origin = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let targetMeters = max(300, targetDistanceKilometers * 1000)
+        let searchRadiusMeters = max(1200, targetMeters * 1.8)
+        let spanDegrees = searchRadiusMeters / 111_000
+        let region = MKCoordinateRegion(
+            center: coordinate,
+            span: MKCoordinateSpan(latitudeDelta: spanDegrees, longitudeDelta: spanDegrees)
+        )
+
+        var candidates: [WalkingGoalCandidate] = []
+        for category in [WalkingGoalCategory.cafe, .park] {
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = category.query
+            request.region = region
+            let response = try await MKLocalSearch(request: request).start()
+
+            let categoryCandidates = response.mapItems.compactMap { mapItem -> WalkingGoalCandidate? in
+                let destination = mapItem.placemark.location
+                guard let destination else { return nil }
+                let distance = origin.distance(from: destination)
+                guard distance > 80 else { return nil }
+                let gap = abs(distance - targetMeters)
+                let name = mapItem.name ?? category.query
+                return WalkingGoalCandidate(
+                    id: "\(category.rawValue)-\(name)-\(mapItem.placemark.coordinate.latitude)-\(mapItem.placemark.coordinate.longitude)",
+                    name: name,
+                    category: category,
+                    coordinate: mapItem.placemark.coordinate,
+                    distanceMeters: distance,
+                    distanceGapMeters: gap
+                )
+            }
+
+            candidates.append(contentsOf: categoryCandidates)
+        }
+
+        return Array(
+            candidates
+                .sorted { lhs, rhs in
+                    if lhs.distanceGapMeters == rhs.distanceGapMeters {
+                        return lhs.distanceMeters < rhs.distanceMeters
+                    }
+                    return lhs.distanceGapMeters < rhs.distanceGapMeters
+                }
+                .prefix(6)
+        )
+    }
 }
 
 #Preview {

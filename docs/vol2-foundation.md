@@ -31,21 +31,23 @@ Vol.2 adds a walking map layer on top of the current Yamanote progress loop. The
 ## First Implementation Slice
 
 1. Add a MapKit map tab that does not require StoreKit.
-2. Render the static Yamanote loop from station coordinates.
-3. Use `AppStateStore.routeProgress` to place the current position on the active segment.
-4. Keep map-specific state local to the map view until a paid feature boundary is introduced.
-5. Add tests for feature gating and state isolation when StoreKit or unlock behavior is added.
+2. Show the user's current location on a real map.
+3. Use `AppStateStore.routeProgress.distanceToNextStationKilometers` as the target walking distance.
+4. Suggest nearby walking goals, such as cafes and parks, whose distance from the user is close to the next-station distance.
+5. Keep map-specific state local to the map view until a paid feature boundary is introduced.
+6. Add tests for feature gating and state isolation when StoreKit or unlock behavior is added.
 
 ## Current Slice
 
 - `MainTabView` includes a `マップ` tab.
-- The map renders the Yamanote loop, station markers, and an interpolated current-position marker.
-- Start station, direction, current segment, and lap number are read from existing v0.1 state.
+- The map centers on the user's current location after location permission is granted.
+- The distance to the next Yamanote station is reused as a walking-distance target.
+- Nearby cafes and parks are searched with MapKit and ranked by distance gap from that target.
 - StoreKit and subscription unlock logic are intentionally not included yet.
 
 ## Acceptance Criteria
 
 - v0.1 Home, History, and Badge tabs keep working with existing persisted data.
 - Vol.2 code can be disabled without changing route progress or history.
-- The first map shell builds and runs in simulator with dummy data.
+- The first map shell builds and can handle location permission denied or unavailable states.
 - No App Store subscription assumptions are hard-coded before product IDs are decided.
