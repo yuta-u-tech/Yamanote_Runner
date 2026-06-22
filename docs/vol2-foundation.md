@@ -30,13 +30,18 @@ Vol.2 adds a walking map layer on top of the current Yamanote progress loop. The
 
 ## First Implementation Slice
 
-1. Add an unavailable/locked map tab shell that does not require StoreKit.
-2. Define the map view model state separately from `AppStateStore`.
-3. Decide the first map data source:
-   - static Yamanote route visualization, or
-   - user walking path mock, or
-   - MapKit user-location preview.
-4. Add tests for feature gating and state isolation.
+1. Add a MapKit map tab that does not require StoreKit.
+2. Render the static Yamanote loop from station coordinates.
+3. Use `AppStateStore.routeProgress` to place the current position on the active segment.
+4. Keep map-specific state local to the map view until a paid feature boundary is introduced.
+5. Add tests for feature gating and state isolation when StoreKit or unlock behavior is added.
+
+## Current Slice
+
+- `MainTabView` includes a `マップ` tab.
+- The map renders the Yamanote loop, station markers, and an interpolated current-position marker.
+- Start station, direction, current segment, and lap number are read from existing v0.1 state.
+- StoreKit and subscription unlock logic are intentionally not included yet.
 
 ## Acceptance Criteria
 
