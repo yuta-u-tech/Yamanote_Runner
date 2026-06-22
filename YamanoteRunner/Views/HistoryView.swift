@@ -76,48 +76,56 @@ private struct ScrollableHistoryBarChart: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .bottom, spacing: 6) {
-                    ForEach(days, id: \.date) { day in
-                        let isSelected = Calendar.current.isDate(day.date, inSameDayAs: selectedDate)
-                        DayBar(
-                            date: day.date,
-                            distance: day.record?.distanceKilometers,
-                            maxDistance: maxDistance,
-                            isSelected: isSelected
-                        )
-                        .frame(width: 42)
-                        .id(day.date)
-                        .onTapGesture {
-                            selectedDate = day.date
+        GeometryReader { geometry in
+            let visibleBarCount = 7.0
+            let horizontalPadding = 12.0
+            let barSpacing = 6.0
+            let availableWidth = geometry.size.width - horizontalPadding * 2 - barSpacing * (visibleBarCount - 1)
+            let barWidth = max(32, availableWidth / visibleBarCount)
+
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .bottom, spacing: barSpacing) {
+                        ForEach(days, id: \.date) { day in
+                            let isSelected = Calendar.current.isDate(day.date, inSameDayAs: selectedDate)
+                            DayBar(
+                                date: day.date,
+                                distance: day.record?.distanceKilometers,
+                                maxDistance: maxDistance,
+                                isSelected: isSelected
+                            )
+                            .frame(width: barWidth)
+                            .id(day.date)
+                            .onTapGesture {
+                                selectedDate = day.date
+                                scheduleReturn(to: today, with: proxy)
+                            }
+                            .animation(.easeInOut(duration: 0.18), value: isSelected)
+                        }
+                    }
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.top, 10)
+                    .padding(.bottom, 4)
+                }
+                .onAppear {
+                    proxy.scrollTo(today, anchor: .trailing)
+                }
+                .onDisappear {
+                    returnTask?.cancel()
+                }
+                .onChange(of: selectedDate) { _, _ in
+                    scheduleReturn(to: today, with: proxy)
+                }
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 1)
+                        .onChanged { _ in
+                            returnTask?.cancel()
+                        }
+                        .onEnded { _ in
                             scheduleReturn(to: today, with: proxy)
                         }
-                        .animation(.easeInOut(duration: 0.18), value: isSelected)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.top, 10)
-                .padding(.bottom, 4)
+                )
             }
-            .onAppear {
-                proxy.scrollTo(today, anchor: .trailing)
-            }
-            .onDisappear {
-                returnTask?.cancel()
-            }
-            .onChange(of: selectedDate) { _, _ in
-                scheduleReturn(to: today, with: proxy)
-            }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 1)
-                    .onChanged { _ in
-                        returnTask?.cancel()
-                    }
-                    .onEnded { _ in
-                        scheduleReturn(to: today, with: proxy)
-                    }
-            )
         }
     }
 
