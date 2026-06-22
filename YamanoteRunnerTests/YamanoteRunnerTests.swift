@@ -59,6 +59,8 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(event.passedStations.map(\.name), ["有楽町", "新橋"])
         XCTAssertEqual(event.nextStation.name, "浜松町")
         XCTAssertEqual(event.distanceToNextStationKilometers, 0.7, accuracy: 0.001)
+        XCTAssertEqual(store.historyRecords[0].passedStationNames, ["有楽町", "新橋"])
+        XCTAssertEqual(store.historyRecords[0].reachedStationName, "新橋")
 
         let restoredStore = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
         XCTAssertEqual(restoredStore.selectedDirection, .outer)
@@ -353,6 +355,28 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(yesterdayRecord.stepCount, 6_000)
         XCTAssertEqual(yesterdayRecord.passedStationNames, ["神田", "秋葉原", "御徒町", "上野"])
         XCTAssertEqual(yesterdayRecord.reachedStationName, "上野")
+    }
+
+    @MainActor
+    func testAppStateRebuildsMeasuredHistoryFromExistingCumulativeStartPosition() {
+        let userDefaults = makeIsolatedUserDefaults()
+        userDefaults.set(18.0, forKey: "cumulativeDistanceKilometers")
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11))!
+
+        store.syncHistoryRecords([
+            DailyWalkingRunningDistance(
+                date: date,
+                stepCount: 4_200,
+                kilometers: 3.2,
+                strideMeters: 0.76,
+                isStrideEstimated: false
+            )
+        ], updatedAt: date)
+
+        XCTAssertEqual(store.cumulativeDistanceKilometers, 18.0, accuracy: 0.001)
+        XCTAssertEqual(store.historyRecords[0].passedStationNames, ["新大久保", "新宿", "代々木"])
+        XCTAssertEqual(store.historyRecords[0].reachedStationName, "代々木")
     }
 
     @MainActor
