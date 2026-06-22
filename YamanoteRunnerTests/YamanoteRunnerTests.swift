@@ -308,7 +308,7 @@ final class YamanoteRunnerTests: XCTestCase {
     }
 
     @MainActor
-    func testAppStateHistoryReachedStationUsesDailyDistanceInsteadOfCumulativeProgress() {
+    func testAppStateHistoryReachedStationUsesThatDaysCumulativeRouteSegment() {
         let userDefaults = makeIsolatedUserDefaults()
         let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
         let firstDate = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
@@ -322,8 +322,8 @@ final class YamanoteRunnerTests: XCTestCase {
         }!
         XCTAssertEqual(store.cumulativeDistanceKilometers, 11.4, accuracy: 0.001)
         XCTAssertEqual(nextDayRecord.distanceKilometers, 1.4, accuracy: 0.001)
-        XCTAssertEqual(nextDayRecord.reachedStationName, "神田")
-        XCTAssertEqual(nextDayRecord.passedStationNames, ["神田"])
+        XCTAssertEqual(nextDayRecord.reachedStationName, "大塚")
+        XCTAssertEqual(nextDayRecord.passedStationNames, ["大塚"])
     }
 
     @MainActor

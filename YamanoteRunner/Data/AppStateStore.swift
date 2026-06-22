@@ -177,11 +177,13 @@ final class AppStateStore: ObservableObject {
             currentCumulativeDistanceKilometers: cumulativeDistanceKilometers
         )
         lastDistanceSyncEvent = distanceSyncEvent
+        let dayStartCumulativeDistanceKilometers = max(0, cumulativeDistanceKilometers - normalizedTodayDistance)
         updateHistoryRecord(
             todayDistanceKilometers: normalizedTodayDistance,
             stepCount: stepCount,
             at: date,
-            updatedAt: date
+            updatedAt: date,
+            routeStartDistanceKilometers: dayStartCumulativeDistanceKilometers
         )
         updateProgressBadges()
 
@@ -204,6 +206,7 @@ final class AppStateStore: ObservableObject {
         }
 
         historyRecords.sort { $0.date > $1.date }
+        rebuildHistoryRouteDetails()
         saveHistoryRecords()
     }
 
@@ -266,14 +269,16 @@ final class AppStateStore: ObservableObject {
         todayDistanceKilometers: Double,
         stepCount: Int?,
         at date: Date,
-        updatedAt: Date
+        updatedAt: Date,
+        routeStartDistanceKilometers: Double
     ) {
         let dayStart = calendar.startOfDay(for: date)
         let record = makeHistoryRecord(
             date: dayStart,
             distanceKilometers: todayDistanceKilometers,
             stepCount: stepCount,
-            updatedAt: updatedAt
+            updatedAt: updatedAt,
+            routeStartDistanceKilometers: routeStartDistanceKilometers
         )
 
         historyRecords.removeAll { $0.id == record.id }
@@ -304,12 +309,15 @@ final class AppStateStore: ObservableObject {
         date: Date,
         distanceKilometers: Double,
         stepCount: Int?,
-        updatedAt: Date
+        updatedAt: Date,
+        routeStartDistanceKilometers: Double = 0
     ) -> DailyRunHistoryRecord {
         let dayStart = calendar.startOfDay(for: date)
         let normalizedDistance = max(0, distanceKilometers)
-        let dailyProgress = YamanoteRoute.progress(
-            for: normalizedDistance,
+        let routeStartDistance = max(0, routeStartDistanceKilometers)
+        let routeEndDistance = routeStartDistance + normalizedDistance
+        let routeProgress = YamanoteRoute.progress(
+            for: routeEndDistance,
             startingAt: startingStation,
             direction: selectedDirection
         )
@@ -320,15 +328,34 @@ final class AppStateStore: ObservableObject {
             distanceKilometers: normalizedDistance,
             stepCount: stepCount.map { max(0, $0) },
             passedStationNames: YamanoteRoute.passedStations(
-                from: 0,
-                to: normalizedDistance,
+                from: routeStartDistance,
+                to: routeEndDistance,
                 startingAt: startingStation,
                 direction: selectedDirection
             ).map(\.name),
-            reachedStationName: dailyProgress.currentSegment.from.name,
-            currentLapNumber: dailyProgress.currentLapNumber,
+            reachedStationName: routeProgress.currentSegment.from.name,
+            currentLapNumber: routeProgress.currentLapNumber,
             updatedAt: updatedAt
         )
+    }
+
+    private func rebuildHistoryRouteDetails() {
+        var routeStartDistance = 0.0
+        var rebuiltRecords: [DailyRunHistoryRecord] = []
+
+        for record in historyRecords.sorted(by: { $0.date < $1.date }) {
+            let rebuiltRecord = makeHistoryRecord(
+                date: record.date,
+                distanceKilometers: record.distanceKilometers,
+                stepCount: record.stepCount,
+                updatedAt: record.updatedAt,
+                routeStartDistanceKilometers: routeStartDistance
+            )
+            rebuiltRecords.append(rebuiltRecord)
+            routeStartDistance += max(0, record.distanceKilometers)
+        }
+
+        historyRecords = rebuiltRecords.sorted { $0.date > $1.date }
     }
 
     private func saveHistoryRecords() {
