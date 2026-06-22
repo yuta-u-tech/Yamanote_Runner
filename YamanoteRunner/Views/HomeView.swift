@@ -119,7 +119,7 @@ struct HomeView: View {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-dummy") {
             todayDistanceViewModel.loadDummyData(distanceKilometers: 3.2, stepCount: 4200)
-            appStateStore.syncTodayDistance(3.2)
+            appStateStore.syncTodayDistance(3.2, stepCount: 4200)
             return
         }
         #endif
@@ -128,7 +128,10 @@ struct HomeView: View {
             heightCentimeters: appStateStore.heightCentimeters
         )
         if let distanceKilometers = todayDistanceViewModel.distanceKilometers {
-            appStateStore.syncTodayDistance(distanceKilometers)
+            appStateStore.syncTodayDistance(
+                distanceKilometers,
+                stepCount: todayDistanceViewModel.stepCount
+            )
             appStateStore.syncHistoryRecords(todayDistanceViewModel.recentDailyDistances)
         } else if let errorMessage = todayDistanceViewModel.errorMessage {
             appStateStore.failDistanceRefresh(message: errorMessage)

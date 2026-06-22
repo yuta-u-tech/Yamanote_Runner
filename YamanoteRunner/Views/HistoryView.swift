@@ -163,6 +163,17 @@ private struct HistoryRecordDetail: View {
             }
 
             HStack(spacing: 20) {
+                if let stepCount = record.stepCount {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("歩数")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Label("\(stepCount.formatted())歩", systemImage: "shoeprints.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.green)
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text("到達駅")
                         .font(.caption2)

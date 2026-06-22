@@ -117,7 +117,7 @@ final class HealthDistanceService {
         let predicate = HKQuery.predicateForSamples(
             withStart: startDate,
             end: endDate,
-            options: [.strictStartDate]
+            options: [.strictStartDate, .strictEndDate]
         )
         let stepCount = Int(
             try await cumulativeQuantity(

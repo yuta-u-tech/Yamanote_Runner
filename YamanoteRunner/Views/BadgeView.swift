@@ -19,7 +19,7 @@ struct BadgeView: View {
                 )
             } else {
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), spacing: 14)], spacing: 14) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 128), spacing: 10)], spacing: 10) {
                         ForEach(badges) { badge in
                             Button {
                                 selectedBadge = badge
@@ -29,7 +29,8 @@ struct BadgeView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding()
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
                 }
             }
         }
@@ -45,8 +46,8 @@ private struct BadgeCard: View {
     let badge: RunnerBadge
 
     var body: some View {
-        VStack(spacing: 10) {
-            BadgeArtworkImage(imageName: badge.imageName, size: 94, cornerRadius: 18)
+        VStack(spacing: 8) {
+            BadgeArtworkImage(imageName: badge.imageName, size: 100, cornerRadius: 18)
 
             Text(badge.title)
                 .font(.headline)
@@ -57,10 +58,11 @@ private struct BadgeCard: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.green)
         }
-        .frame(maxWidth: .infinity, minHeight: 158)
-        .padding()
+        .frame(maxWidth: .infinity, minHeight: 150)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 12)
         .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -70,15 +72,15 @@ private struct BadgeDetailView: View {
 
     let badge: RunnerBadge
     private var artworkSize: CGFloat {
-        verticalSizeClass == .compact ? 160 : 260
+        verticalSizeClass == .compact ? 150 : 228
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 22) {
-                    BadgeArtworkImage(imageName: badge.imageName, size: artworkSize, cornerRadius: 30)
-                        .shadow(color: .black.opacity(0.14), radius: 18, y: 8)
+                VStack(spacing: 16) {
+                    BadgeArtworkImage(imageName: badge.imageName, size: artworkSize, cornerRadius: 26)
+                        .shadow(color: .black.opacity(0.12), radius: 14, y: 6)
 
                     VStack(spacing: 8) {
                         Text(badge.title)
@@ -95,7 +97,8 @@ private struct BadgeDetailView: View {
                         .foregroundStyle(.green)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(24)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 18)
             }
             .navigationTitle("バッジ詳細")
             .navigationBarTitleDisplayMode(.inline)

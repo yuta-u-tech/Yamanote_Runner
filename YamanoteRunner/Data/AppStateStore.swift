@@ -18,6 +18,7 @@ struct DailyRunHistoryRecord: Identifiable, Codable, Hashable {
     let id: String
     let date: Date
     let distanceKilometers: Double
+    let stepCount: Int?
     let passedStationNames: [String]
     let reachedStationName: String
     let currentLapNumber: Int
@@ -155,7 +156,7 @@ final class AppStateStore: ObservableObject {
         distanceRefreshState = .loading
     }
 
-    func syncTodayDistance(_ todayDistanceKilometers: Double, at date: Date = Date()) {
+    func syncTodayDistance(_ todayDistanceKilometers: Double, stepCount: Int? = nil, at date: Date = Date()) {
         let normalizedTodayDistance = max(0, todayDistanceKilometers)
         let additionalDistance: Double
 
@@ -178,8 +179,9 @@ final class AppStateStore: ObservableObject {
         lastDistanceSyncEvent = distanceSyncEvent
         updateHistoryRecord(
             todayDistanceKilometers: normalizedTodayDistance,
+            stepCount: stepCount,
             at: date,
-            event: distanceSyncEvent
+            updatedAt: date
         )
         updateProgressBadges()
 
@@ -196,6 +198,7 @@ final class AppStateStore: ObservableObject {
             upsertHistoryRecord(
                 date: dailyDistance.date,
                 distanceKilometers: dailyDistance.kilometers,
+                stepCount: dailyDistance.stepCount,
                 updatedAt: updatedAt
             )
         }
@@ -261,32 +264,19 @@ final class AppStateStore: ObservableObject {
 
     private func updateHistoryRecord(
         todayDistanceKilometers: Double,
+        stepCount: Int?,
         at date: Date,
-        event: DistanceSyncEvent
+        updatedAt: Date
     ) {
         let dayStart = calendar.startOfDay(for: date)
-        let id = historyRecordID(for: dayStart)
-        let progress = routeProgress
-        var passedStationNames = event.passedStations.map(\.name)
-
-        if let existingRecord = historyRecords.first(where: { $0.id == id }) {
-            passedStationNames = existingRecord.passedStationNames
-            for stationName in event.passedStations.map(\.name) where !passedStationNames.contains(stationName) {
-                passedStationNames.append(stationName)
-            }
-        }
-
-        let record = DailyRunHistoryRecord(
-            id: id,
+        let record = makeHistoryRecord(
             date: dayStart,
             distanceKilometers: todayDistanceKilometers,
-            passedStationNames: passedStationNames,
-            reachedStationName: progress.currentSegment.from.name,
-            currentLapNumber: progress.currentLapNumber,
-            updatedAt: date
+            stepCount: stepCount,
+            updatedAt: updatedAt
         )
 
-        historyRecords.removeAll { $0.id == id }
+        historyRecords.removeAll { $0.id == record.id }
         historyRecords.append(record)
         historyRecords.sort { $0.date > $1.date }
         saveHistoryRecords()
@@ -295,20 +285,40 @@ final class AppStateStore: ObservableObject {
     private func upsertHistoryRecord(
         date: Date,
         distanceKilometers: Double,
+        stepCount: Int?,
         updatedAt: Date
     ) {
         let dayStart = calendar.startOfDay(for: date)
-        let id = historyRecordID(for: dayStart)
+        let record = makeHistoryRecord(
+            date: dayStart,
+            distanceKilometers: distanceKilometers,
+            stepCount: stepCount,
+            updatedAt: updatedAt
+        )
+
+        historyRecords.removeAll { $0.id == record.id }
+        historyRecords.append(record)
+    }
+
+    private func makeHistoryRecord(
+        date: Date,
+        distanceKilometers: Double,
+        stepCount: Int?,
+        updatedAt: Date
+    ) -> DailyRunHistoryRecord {
+        let dayStart = calendar.startOfDay(for: date)
         let normalizedDistance = max(0, distanceKilometers)
         let dailyProgress = YamanoteRoute.progress(
             for: normalizedDistance,
             startingAt: startingStation,
             direction: selectedDirection
         )
-        let record = DailyRunHistoryRecord(
-            id: id,
+
+        return DailyRunHistoryRecord(
+            id: historyRecordID(for: dayStart),
             date: dayStart,
             distanceKilometers: normalizedDistance,
+            stepCount: stepCount.map { max(0, $0) },
             passedStationNames: YamanoteRoute.passedStations(
                 from: 0,
                 to: normalizedDistance,
@@ -319,9 +329,6 @@ final class AppStateStore: ObservableObject {
             currentLapNumber: dailyProgress.currentLapNumber,
             updatedAt: updatedAt
         )
-
-        historyRecords.removeAll { $0.id == id }
-        historyRecords.append(record)
     }
 
     private func saveHistoryRecords() {
