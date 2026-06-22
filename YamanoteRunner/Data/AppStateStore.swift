@@ -340,14 +340,11 @@ final class AppStateStore: ObservableObject {
     }
 
     private func rebuildHistoryRouteDetails() {
-        let sortedRecords = historyRecords.sorted(by: { $0.date < $1.date })
-        let recordedDistance = sortedRecords.reduce(0.0) { partialResult, record in
-            partialResult + max(0, record.distanceKilometers)
-        }
-        var routeStartDistance = max(0, cumulativeDistanceKilometers - recordedDistance)
+        var routeEndDistance = max(0, cumulativeDistanceKilometers)
         var rebuiltRecords: [DailyRunHistoryRecord] = []
 
-        for record in sortedRecords {
+        for record in historyRecords.sorted(by: { $0.date > $1.date }) {
+            let routeStartDistance = max(0, routeEndDistance - max(0, record.distanceKilometers))
             let rebuiltRecord = makeHistoryRecord(
                 date: record.date,
                 distanceKilometers: record.distanceKilometers,
@@ -356,7 +353,7 @@ final class AppStateStore: ObservableObject {
                 routeStartDistanceKilometers: routeStartDistance
             )
             rebuiltRecords.append(rebuiltRecord)
-            routeStartDistance += max(0, record.distanceKilometers)
+            routeEndDistance = routeStartDistance
         }
 
         historyRecords = rebuiltRecords.sorted { $0.date > $1.date }
