@@ -279,10 +279,11 @@ final class YamanoteRunnerTests: XCTestCase {
         let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
         let date = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
 
-        store.syncTodayDistance(2.4, at: date)
+        store.syncTodayDistance(2.4, stepCount: 3_200, at: date)
 
         let record = store.historyRecords.first!
         XCTAssertEqual(record.distanceKilometers, 2.4, accuracy: 0.001)
+        XCTAssertEqual(record.stepCount, 3_200)
         XCTAssertEqual(record.passedStationNames, ["神田", "秋葉原"])
         XCTAssertEqual(record.reachedStationName, "秋葉原")
         XCTAssertEqual(record.currentLapNumber, 1)
@@ -304,6 +305,25 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(store.historyRecords.count, 1)
         XCTAssertEqual(store.historyRecords[0].distanceKilometers, 2.4, accuracy: 0.001)
         XCTAssertEqual(store.historyRecords[0].passedStationNames, ["神田", "秋葉原"])
+    }
+
+    @MainActor
+    func testAppStateHistoryReachedStationUsesDailyDistanceInsteadOfCumulativeProgress() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let store = AppStateStore(userDefaults: userDefaults, calendar: fixedCalendar)
+        let firstDate = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 11, hour: 10))!
+        let nextDate = fixedCalendar.date(from: DateComponents(year: 2026, month: 6, day: 12, hour: 10))!
+
+        store.syncTodayDistance(10.0, at: firstDate)
+        store.syncTodayDistance(1.4, at: nextDate)
+
+        let nextDayRecord = store.historyRecords.first {
+            fixedCalendar.isDate($0.date, inSameDayAs: nextDate)
+        }!
+        XCTAssertEqual(store.cumulativeDistanceKilometers, 11.4, accuracy: 0.001)
+        XCTAssertEqual(nextDayRecord.distanceKilometers, 1.4, accuracy: 0.001)
+        XCTAssertEqual(nextDayRecord.reachedStationName, "神田")
+        XCTAssertEqual(nextDayRecord.passedStationNames, ["神田"])
     }
 
     @MainActor
@@ -330,6 +350,7 @@ final class YamanoteRunnerTests: XCTestCase {
             fixedCalendar.isDate($0.date, inSameDayAs: yesterday)
         }!
         XCTAssertEqual(yesterdayRecord.distanceKilometers, 4.2, accuracy: 0.001)
+        XCTAssertEqual(yesterdayRecord.stepCount, 6_000)
         XCTAssertEqual(yesterdayRecord.passedStationNames, ["神田", "秋葉原", "御徒町", "上野"])
         XCTAssertEqual(yesterdayRecord.reachedStationName, "上野")
     }
@@ -353,6 +374,7 @@ final class YamanoteRunnerTests: XCTestCase {
 
         XCTAssertEqual(store.historyRecords.count, 1)
         XCTAssertEqual(store.historyRecords[0].distanceKilometers, 3.5, accuracy: 0.001)
+        XCTAssertEqual(store.historyRecords[0].stepCount, 5_000)
         XCTAssertEqual(store.historyRecords[0].passedStationNames, ["神田", "秋葉原", "御徒町"])
     }
 

@@ -79,22 +79,13 @@ final class HealthDistanceService {
     ) async throws -> [DailyWalkingRunningDistance] {
         let boundedDays = max(1, days)
         let today = calendar.startOfDay(for: now)
+        let start = calendar.date(byAdding: .day, value: -(boundedDays - 1), to: today) ?? today
 
-        var distances: [DailyWalkingRunningDistance] = []
-        for offset in (0..<boundedDays).reversed() {
-            let start = calendar.date(byAdding: .day, value: -offset, to: today) ?? today
-            let end = offset == 0
-                ? now
-                : calendar.date(byAdding: .day, value: 1, to: start) ?? now
-            let distance = try await walkingRunningDistance(
-                from: start,
-                to: end,
-                heightCentimeters: heightCentimeters
-            )
-            distances.append(distance)
-        }
-
-        return distances
+        return try await dailyWalkingRunningDistances(
+            from: start,
+            to: now,
+            heightCentimeters: heightCentimeters
+        )
     }
 
     private func walkingRunningDistance(
@@ -117,7 +108,7 @@ final class HealthDistanceService {
         let predicate = HKQuery.predicateForSamples(
             withStart: startDate,
             end: endDate,
-            options: [.strictStartDate]
+            options: [.strictStartDate, .strictEndDate]
         )
         let stepCount = Int(
             try await cumulativeQuantity(
@@ -157,6 +148,98 @@ final class HealthDistanceService {
         )
         let statistics = try await descriptor.result(for: healthStore)
         return statistics?.sumQuantity()?.doubleValue(for: unit) ?? 0
+    }
+
+    private func dailyWalkingRunningDistances(
+        from startDate: Date,
+        to endDate: Date,
+        heightCentimeters: Double? = nil
+    ) async throws -> [DailyWalkingRunningDistance] {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            throw HealthDistanceError.unavailable
+        }
+
+        guard let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount) else {
+            throw HealthDistanceError.stepCountTypeUnavailable
+        }
+
+        guard let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning) else {
+            throw HealthDistanceError.distanceTypeUnavailable
+        }
+
+        let dayStart = calendar.startOfDay(for: startDate)
+        let endDayStart = calendar.startOfDay(for: endDate)
+        let dayAfterEnd = calendar.date(byAdding: .day, value: 1, to: endDayStart) ?? endDate
+        let rangeEnd = min(endDate, dayAfterEnd)
+        let stepCounts = try await dailyCumulativeQuantities(
+            for: stepCountType,
+            unit: .count(),
+            from: dayStart,
+            to: rangeEnd
+        )
+        let distances = try await dailyCumulativeQuantities(
+            for: distanceType,
+            unit: .meterUnit(with: .kilo),
+            from: dayStart,
+            to: rangeEnd
+        )
+        let estimator = StepDistanceEstimator(heightCentimeters: heightCentimeters)
+
+        var records: [DailyWalkingRunningDistance] = []
+        var currentDay = dayStart
+        while currentDay <= endDayStart {
+            let stepCount = Int(stepCounts[currentDay] ?? 0)
+            let kilometers = distances[currentDay] ?? 0
+            let stride = estimator.strideMeters(
+                distanceKilometers: kilometers,
+                stepCount: stepCount
+            )
+
+            records.append(
+                DailyWalkingRunningDistance(
+                    date: currentDay,
+                    stepCount: stepCount,
+                    kilometers: kilometers,
+                    strideMeters: stride.meters,
+                    isStrideEstimated: stride.isEstimated
+                )
+            )
+
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: currentDay) else {
+                break
+            }
+            currentDay = nextDay
+        }
+
+        return records
+    }
+
+    private func dailyCumulativeQuantities(
+        for quantityType: HKQuantityType,
+        unit: HKUnit,
+        from startDate: Date,
+        to endDate: Date
+    ) async throws -> [Date: Double] {
+        let predicate = HKQuery.predicateForSamples(
+            withStart: startDate,
+            end: endDate,
+            options: [.strictStartDate, .strictEndDate]
+        )
+        let descriptor = HKStatisticsCollectionQueryDescriptor(
+            predicate: HKSamplePredicate.quantitySample(type: quantityType, predicate: predicate),
+            options: .cumulativeSum,
+            anchorDate: startDate,
+            intervalComponents: DateComponents(day: 1)
+        )
+        let collection = try await descriptor.result(for: healthStore)
+        var quantitiesByDate: [Date: Double] = [:]
+
+        collection.enumerateStatistics(from: startDate, to: endDate) { statistics, _ in
+            let dayStart = self.calendar.startOfDay(for: statistics.startDate)
+            quantitiesByDate[dayStart] = statistics.sumQuantity()?.doubleValue(for: unit) ?? 0
+        }
+
+        return quantitiesByDate
     }
 }
 
