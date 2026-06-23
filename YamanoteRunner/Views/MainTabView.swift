@@ -1,6 +1,7 @@
 import CoreLocation
 import MapKit
 import SwiftUI
+import UIKit
 
 struct MainTabView: View {
     @ObservedObject var appStateStore: AppStateStore
@@ -43,6 +44,7 @@ private struct YamanoteMapView: View {
     @State private var cameraPosition: MapCameraPosition = .region(Self.defaultRegion)
     @State private var goalCandidates: [WalkingGoalCandidate] = []
     @State private var searchState: GoalSearchState = .idle
+    @Environment(\.openURL) private var openURL
 
     private static let defaultRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 35.6812, longitude: 139.7671),
@@ -140,9 +142,17 @@ private struct YamanoteMapView: View {
                 .buttonStyle(.borderedProminent)
 
             case .denied:
-                Text("位置情報を許可すると、今いる場所から\(progress.currentSegment.to.name)までの距離感に近い散歩先を探せます。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("位置情報を許可すると、今いる場所から\(progress.currentSegment.to.name)までの距離感に近い散歩先を探せます。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("設定で位置情報を許可する") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            openURL(url)
+                        }
+                    }
+                    .font(.caption.weight(.semibold))
+                }
 
             case .available:
                 if goalCandidates.isEmpty {
@@ -302,6 +312,9 @@ private final class WalkingMapLocationService: NSObject, ObservableObject, CLLoc
     @Published private(set) var location: CLLocation?
 
     private let locationManager = CLLocationManager()
+    #if DEBUG
+    private let isDummy = ProcessInfo.processInfo.arguments.contains("-dummy")
+    #endif
 
     override init() {
         super.init()
@@ -311,6 +324,13 @@ private final class WalkingMapLocationService: NSObject, ObservableObject, CLLoc
     }
 
     func requestLocation() {
+        #if DEBUG
+        if isDummy {
+            authorizationState = .available
+            location = CLLocation(latitude: 35.6580, longitude: 139.7016)
+            return
+        }
+        #endif
         switch locationManager.authorizationStatus {
         case .notDetermined:
             locationManager.requestWhenInUseAuthorization()
