@@ -1,0 +1,44 @@
+{
+  "identifier" : "YamanoteRunnerStore",
+  "nonConsumableProducts" : [],
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_storeKitConfigurationSchemeName" : "YamanoteRunner"
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "group.yamanoterunner.pro",
+      "localizations" : [],
+      "name" : "山手線ランナー Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "480",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "pro.monthly.001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "現在地から散歩目標地点を確認できるマップ機能をご利用いただけます。",
+              "displayName" : "山手線ランナー Pro 月額",
+              "locale" : "ja_JP"
+            }
+          ],
+          "productID" : "com.yamanoterunner.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Pro Monthly",
+          "subscriptionGroupID" : "group.yamanoterunner.pro",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 2,
+    "minor" : 0,
+    "patch" : 0
+  }
+}

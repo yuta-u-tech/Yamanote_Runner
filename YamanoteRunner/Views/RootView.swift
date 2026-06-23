@@ -4,6 +4,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var appStateStore: AppStateStore
     @StateObject private var healthKitAuthorizationService = HealthKitAuthorizationService()
+    @StateObject private var subscriptionService: SubscriptionService
     private let isDummyPreview: Bool
 
     init() {
@@ -11,11 +12,13 @@ struct RootView: View {
         if ProcessInfo.processInfo.arguments.contains("-dummy") {
             isDummyPreview = true
             _appStateStore = StateObject(wrappedValue: AppStateStore.makeDummy())
+            _subscriptionService = StateObject(wrappedValue: SubscriptionService(initialStatus: .subscribed))
             return
         }
         #endif
         isDummyPreview = false
         _appStateStore = StateObject(wrappedValue: AppStateStore())
+        _subscriptionService = StateObject(wrappedValue: SubscriptionService())
     }
 
     var body: some View {
@@ -38,6 +41,7 @@ struct RootView: View {
                 )
             }
         }
+        .environmentObject(subscriptionService)
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
             healthKitAuthorizationService.refreshAuthorizationState()

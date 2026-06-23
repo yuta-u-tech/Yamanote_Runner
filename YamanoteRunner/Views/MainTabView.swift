@@ -5,6 +5,7 @@ import UIKit
 
 struct MainTabView: View {
     @ObservedObject var appStateStore: AppStateStore
+    @EnvironmentObject private var subscriptionService: SubscriptionService
 
     var body: some View {
         TabView {
@@ -28,13 +29,35 @@ struct MainTabView: View {
             }
 
             NavigationStack {
-                YamanoteMapView(appStateStore: appStateStore)
+                MapTabView(appStateStore: appStateStore)
             }
             .tabItem {
                 Label("マップ", systemImage: "map.fill")
             }
         }
         .tint(.green)
+        .task {
+            await subscriptionService.checkCurrentEntitlement()
+        }
+    }
+}
+
+private struct MapTabView: View {
+    @ObservedObject var appStateStore: AppStateStore
+    @EnvironmentObject private var subscriptionService: SubscriptionService
+
+    var body: some View {
+        switch subscriptionService.status {
+        case .subscribed:
+            YamanoteMapView(appStateStore: appStateStore)
+        case .notSubscribed:
+            SubscriptionPaywallView()
+        case .loading:
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .error(let message):
+            ContentUnavailableView(message, systemImage: "exclamationmark.triangle")
+        }
     }
 }
 
@@ -436,4 +459,5 @@ private enum WalkingGoalSearch {
 
 #Preview {
     MainTabView(appStateStore: AppStateStore(userDefaults: .standard))
+        .environmentObject(SubscriptionService(initialStatus: .subscribed))
 }
