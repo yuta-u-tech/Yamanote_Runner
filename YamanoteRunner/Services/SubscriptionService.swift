@@ -97,14 +97,24 @@ final class SubscriptionService: ObservableObject {
     }
 
     func restoreAdminOverrideIfConfigured() -> Bool {
-        guard let configuredEmail = environment[Self.adminEmailEnvironmentKey]?.trimmedNonEmpty,
-              let configuredPasscode = environment[Self.adminPasscodeEnvironmentKey]?.trimmedNonEmpty,
-              configuredEmail.lowercased() == Self.adminRestoreEmail.lowercased(),
-              configuredPasscode == Self.adminRestorePasscode
-        else {
-            return false
+        if let configuredEmail = environment[Self.adminEmailEnvironmentKey]?.trimmedNonEmpty,
+           let configuredPasscode = environment[Self.adminPasscodeEnvironmentKey]?.trimmedNonEmpty {
+            guard configuredEmail.lowercased() == Self.adminRestoreEmail.lowercased(),
+                  configuredPasscode == Self.adminRestorePasscode
+            else {
+                return false
+            }
+            return enableAdminOverride()
         }
 
+        #if DEBUG
+        return enableAdminOverride()
+        #else
+        return false
+        #endif
+    }
+
+    private func enableAdminOverride() -> Bool {
         userDefaults.set(true, forKey: Self.adminOverrideUserDefaultsKey)
         status = .subscribed
         return true

@@ -583,6 +583,22 @@ final class YamanoteRunnerTests: XCTestCase {
     }
 
     @MainActor
+    func testSubscriptionServiceRestoresAdminWithoutEnvironmentInDebugBuild() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let service = SubscriptionService(
+            initialStatus: .notSubscribed,
+            userDefaults: userDefaults,
+            environment: [:]
+        )
+
+        let didRestore = service.restoreAdminOverrideIfConfigured()
+
+        XCTAssertTrue(didRestore)
+        XCTAssertEqual(service.status, .subscribed)
+        XCTAssertTrue(userDefaults.bool(forKey: SubscriptionService.adminOverrideUserDefaultsKey))
+    }
+
+    @MainActor
     func testSubscriptionServiceIgnoresInvalidAdminRestoreCredentials() {
         let userDefaults = makeIsolatedUserDefaults()
         let service = SubscriptionService(
