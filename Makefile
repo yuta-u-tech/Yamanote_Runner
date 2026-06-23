@@ -41,7 +41,10 @@ launch-preview:
 
 launch-admin:
 	xcrun simctl terminate booted $(BUNDLE_ID) || true
-	xcrun simctl launch booted $(BUNDLE_ID) -adminSubscription
+	xcrun simctl launch booted \
+		--env YAMANOTE_ADMIN_EMAIL "$$YAMANOTE_ADMIN_EMAIL" \
+		--env YAMANOTE_ADMIN_PASSCODE "$$YAMANOTE_ADMIN_PASSCODE" \
+		$(BUNDLE_ID)
 
 run: build boot install launch
 

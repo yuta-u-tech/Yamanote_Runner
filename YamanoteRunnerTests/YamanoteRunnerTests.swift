@@ -564,6 +564,59 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(service.status, .subscribed)
     }
 
+    @MainActor
+    func testSubscriptionServiceUnlocksAdminWithEnvironmentCredentials() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let service = SubscriptionService(
+            initialStatus: .notSubscribed,
+            userDefaults: userDefaults,
+            environment: [
+                SubscriptionService.adminEmailEnvironmentKey: "admin@example.com",
+                SubscriptionService.adminPasscodeEnvironmentKey: "123456"
+            ]
+        )
+
+        let result = service.unlockAdmin(email: " ADMIN@example.com ", passcode: " 123456 ")
+
+        XCTAssertEqual(result, .unlocked)
+        XCTAssertEqual(service.status, .subscribed)
+        XCTAssertTrue(userDefaults.bool(forKey: SubscriptionService.adminOverrideUserDefaultsKey))
+    }
+
+    @MainActor
+    func testSubscriptionServiceRejectsInvalidAdminCredentials() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let service = SubscriptionService(
+            initialStatus: .notSubscribed,
+            userDefaults: userDefaults,
+            environment: [
+                SubscriptionService.adminEmailEnvironmentKey: "admin@example.com",
+                SubscriptionService.adminPasscodeEnvironmentKey: "123456"
+            ]
+        )
+
+        let result = service.unlockAdmin(email: "admin@example.com", passcode: "000000")
+
+        XCTAssertEqual(result, .invalidCredentials)
+        XCTAssertEqual(service.status, .notSubscribed)
+        XCTAssertFalse(userDefaults.bool(forKey: SubscriptionService.adminOverrideUserDefaultsKey))
+    }
+
+    @MainActor
+    func testSubscriptionServiceReportsAdminCredentialsNotConfigured() {
+        let userDefaults = makeIsolatedUserDefaults()
+        let service = SubscriptionService(
+            initialStatus: .notSubscribed,
+            userDefaults: userDefaults,
+            environment: [:]
+        )
+
+        let result = service.unlockAdmin(email: "admin@example.com", passcode: "123456")
+
+        XCTAssertEqual(result, .notConfigured)
+        XCTAssertEqual(service.status, .notSubscribed)
+    }
+
     private var fixedCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

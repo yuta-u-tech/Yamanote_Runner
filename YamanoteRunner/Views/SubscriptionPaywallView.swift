@@ -5,6 +5,9 @@ struct SubscriptionPaywallView: View {
     @EnvironmentObject private var subscriptionService: SubscriptionService
     @State private var isPurchasing = false
     @State private var isRestoring = false
+    @State private var showsAdminUnlock = false
+    @State private var adminEmail = ""
+    @State private var adminPasscode = ""
     @State private var errorMessage: String?
 
     private var product: Product? { subscriptionService.availableProducts.first }
@@ -67,6 +70,8 @@ struct SubscriptionPaywallView: View {
                     .disabled(isPurchasing || isRestoring)
                 }
 
+                adminUnlockSection
+
                 if let errorMessage {
                     Text(errorMessage)
                         .font(.caption)
@@ -93,6 +98,47 @@ struct SubscriptionPaywallView: View {
         }
     }
 
+    private var adminUnlockSection: some View {
+        VStack(spacing: 10) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showsAdminUnlock.toggle()
+                }
+            } label: {
+                Label("管理者として解除", systemImage: "person.badge.key.fill")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(.bordered)
+
+            if showsAdminUnlock {
+                VStack(spacing: 10) {
+                    TextField("管理者メールアドレス", text: $adminEmail)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.emailAddress)
+                        .textContentType(.emailAddress)
+                        .textFieldStyle(.roundedBorder)
+
+                    SecureField("擬似パスコード", text: $adminPasscode)
+                        .textContentType(.oneTimeCode)
+                        .textFieldStyle(.roundedBorder)
+
+                    Button {
+                        unlockAdmin()
+                    } label: {
+                        Text("管理者権限で開く")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .disabled(adminEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || adminPasscode.isEmpty)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+
     private func startPurchase() async {
         guard let product else { return }
         isPurchasing = true
@@ -112,6 +158,19 @@ struct SubscriptionPaywallView: View {
         await subscriptionService.restorePurchases()
         if case .error(let msg) = subscriptionService.status {
             errorMessage = msg
+        }
+    }
+
+    private func unlockAdmin() {
+        errorMessage = nil
+        switch subscriptionService.unlockAdmin(email: adminEmail, passcode: adminPasscode) {
+        case .unlocked:
+            adminEmail = ""
+            adminPasscode = ""
+        case .invalidCredentials:
+            errorMessage = "管理者メールアドレスまたは擬似パスコードが違います。"
+        case .notConfigured:
+            errorMessage = "管理者用の環境変数が設定されていません。"
         }
     }
 }

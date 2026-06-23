@@ -8,6 +8,12 @@ enum SubscriptionStatus: Equatable {
     case error(String)
 }
 
+enum AdminUnlockResult: Equatable {
+    case unlocked
+    case invalidCredentials
+    case notConfigured
+}
+
 @MainActor
 final class SubscriptionService: ObservableObject {
     @Published private(set) var status: SubscriptionStatus
@@ -15,11 +21,19 @@ final class SubscriptionService: ObservableObject {
 
     static let productIDs: Set<String> = ["com.yamanoterunner.pro.monthly"]
     static let adminOverrideUserDefaultsKey = "vol2.adminSubscriptionOverride"
+    static let adminEmailEnvironmentKey = "YAMANOTE_ADMIN_EMAIL"
+    static let adminPasscodeEnvironmentKey = "YAMANOTE_ADMIN_PASSCODE"
 
     private let userDefaults: UserDefaults
+    private let environment: [String: String]
 
-    init(initialStatus: SubscriptionStatus = .loading, userDefaults: UserDefaults = .standard) {
+    init(
+        initialStatus: SubscriptionStatus = .loading,
+        userDefaults: UserDefaults = .standard,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) {
         self.userDefaults = userDefaults
+        self.environment = environment
         status = Self.isAdminOverrideEnabled(userDefaults: userDefaults) ? .subscribed : initialStatus
     }
 
@@ -80,6 +94,26 @@ final class SubscriptionService: ObservableObject {
         status = .notSubscribed
     }
 
+    func unlockAdmin(email: String, passcode: String) -> AdminUnlockResult {
+        guard let configuredEmail = environment[Self.adminEmailEnvironmentKey]?.trimmedNonEmpty,
+              let configuredPasscode = environment[Self.adminPasscodeEnvironmentKey]?.trimmedNonEmpty
+        else {
+            return .notConfigured
+        }
+
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedPasscode = passcode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalizedEmail == configuredEmail.lowercased(),
+              normalizedPasscode == configuredPasscode
+        else {
+            return .invalidCredentials
+        }
+
+        userDefaults.set(true, forKey: Self.adminOverrideUserDefaultsKey)
+        status = .subscribed
+        return .unlocked
+    }
+
     private var isAdminOverrideEnabled: Bool {
         Self.isAdminOverrideEnabled(userDefaults: userDefaults)
     }
@@ -103,4 +137,11 @@ final class SubscriptionService: ObservableObject {
 
 enum SubscriptionError: Error {
     case failedVerification
+}
+
+private extension String {
+    var trimmedNonEmpty: String? {
+        let value = trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
+    }
 }
