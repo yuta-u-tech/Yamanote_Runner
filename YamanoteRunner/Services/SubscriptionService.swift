@@ -14,12 +14,18 @@ final class SubscriptionService: ObservableObject {
     @Published private(set) var availableProducts: [Product] = []
 
     static let productIDs: Set<String> = ["com.yamanoterunner.pro.monthly"]
+    static let adminOverrideUserDefaultsKey = "vol2.adminSubscriptionOverride"
 
-    init(initialStatus: SubscriptionStatus = .loading) {
-        status = initialStatus
+    private let userDefaults: UserDefaults
+
+    init(initialStatus: SubscriptionStatus = .loading, userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+        status = Self.isAdminOverrideEnabled(userDefaults: userDefaults) ? .subscribed : initialStatus
     }
 
     func loadProducts() async {
+        guard !isAdminOverrideEnabled else { return }
+
         do {
             let products = try await Product.products(for: Self.productIDs)
             availableProducts = products.sorted { $0.price < $1.price }
@@ -44,6 +50,11 @@ final class SubscriptionService: ObservableObject {
     }
 
     func restorePurchases() async {
+        guard !isAdminOverrideEnabled else {
+            status = .subscribed
+            return
+        }
+
         do {
             try await AppStore.sync()
             await checkCurrentEntitlement()
@@ -53,6 +64,11 @@ final class SubscriptionService: ObservableObject {
     }
 
     func checkCurrentEntitlement() async {
+        guard !isAdminOverrideEnabled else {
+            status = .subscribed
+            return
+        }
+
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result,
                Self.productIDs.contains(transaction.productID),
@@ -62,6 +78,17 @@ final class SubscriptionService: ObservableObject {
             }
         }
         status = .notSubscribed
+    }
+
+    private var isAdminOverrideEnabled: Bool {
+        Self.isAdminOverrideEnabled(userDefaults: userDefaults)
+    }
+
+    private static func isAdminOverrideEnabled(userDefaults: UserDefaults) -> Bool {
+        let arguments = ProcessInfo.processInfo.arguments
+        return arguments.contains("-adminSubscription")
+            || arguments.contains("-admin")
+            || userDefaults.bool(forKey: adminOverrideUserDefaultsKey)
     }
 
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {

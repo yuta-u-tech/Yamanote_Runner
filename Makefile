@@ -4,7 +4,7 @@ DERIVED_DATA=.build
 SIMULATOR=iPhone 17
 BUNDLE_ID=com.youbo0129ueno.YamanoteRunner
 
-.PHONY: build test boot install launch launch-preview run run-preview clean
+.PHONY: build test boot install launch launch-preview launch-admin run run-preview run-admin clean
 
 build:
 	xcodebuild \
@@ -39,9 +39,15 @@ launch-preview:
 	xcrun simctl terminate booted $(BUNDLE_ID) || true
 	xcrun simctl launch booted $(BUNDLE_ID) -dummy
 
+launch-admin:
+	xcrun simctl terminate booted $(BUNDLE_ID) || true
+	xcrun simctl launch booted $(BUNDLE_ID) -adminSubscription
+
 run: build boot install launch
 
 run-preview: build boot install launch-preview
+
+run-admin: build boot install launch-admin
 
 clean:
 	rm -rf $(DERIVED_DATA)

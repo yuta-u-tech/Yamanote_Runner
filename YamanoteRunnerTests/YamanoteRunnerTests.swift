@@ -543,6 +543,27 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertEqual(progress.distanceToNextStationKilometers, 1.3, accuracy: 0.001)
     }
 
+    @MainActor
+    func testSubscriptionServiceUsesAdminOverrideFromUserDefaults() {
+        let userDefaults = makeIsolatedUserDefaults()
+        userDefaults.set(true, forKey: SubscriptionService.adminOverrideUserDefaultsKey)
+
+        let service = SubscriptionService(userDefaults: userDefaults)
+
+        XCTAssertEqual(service.status, .subscribed)
+    }
+
+    @MainActor
+    func testSubscriptionServiceKeepsAdminOverrideWhenCheckingEntitlement() async {
+        let userDefaults = makeIsolatedUserDefaults()
+        userDefaults.set(true, forKey: SubscriptionService.adminOverrideUserDefaultsKey)
+        let service = SubscriptionService(initialStatus: .notSubscribed, userDefaults: userDefaults)
+
+        await service.checkCurrentEntitlement()
+
+        XCTAssertEqual(service.status, .subscribed)
+    }
+
     private var fixedCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
