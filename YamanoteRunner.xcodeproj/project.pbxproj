@@ -27,6 +27,10 @@
 		A1000000000000000000001F /* DirectionSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000032 /* DirectionSelectionView.swift */; };
 		A10000000000000000000090 /* YamanoteLineageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000033 /* YamanoteLineageView.swift */; };
 		A10000000000000000000091 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000034 /* HistoryView.swift */; };
+		A10000000000000000000097 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000096 /* SubscriptionService.swift */; };
+		A10000000000000000000099 /* WalkingTargetCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000098 /* WalkingTargetCalculator.swift */; };
+		A1000000000000000000009B /* SubscriptionPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009A /* SubscriptionPaywallView.swift */; };
+		A1000000000000000000009D /* WalkingTargetCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009C /* WalkingTargetCalculatorTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,6 +67,11 @@
 		A10000000000000000000032 /* DirectionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectionSelectionView.swift; sourceTree = "<group>"; };
 		A10000000000000000000033 /* YamanoteLineageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YamanoteLineageView.swift; sourceTree = "<group>"; };
 		A10000000000000000000034 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		A10000000000000000000096 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
+		A10000000000000000000098 /* WalkingTargetCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkingTargetCalculator.swift; sourceTree = "<group>"; };
+		A1000000000000000000009A /* SubscriptionPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionPaywallView.swift; sourceTree = "<group>"; };
+		A1000000000000000000009C /* WalkingTargetCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkingTargetCalculatorTests.swift; sourceTree = "<group>"; };
+		A1000000000000000000009E /* YamanoteRunner.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = YamanoteRunner.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +106,7 @@
 			children = (
 				A10000000000000000000005 /* YamanoteRunner */,
 				A10000000000000000000006 /* YamanoteRunnerTests */,
+				A1000000000000000000009E /* YamanoteRunner.storekit */,
 				A10000000000000000000007 /* Products */,
 				93C600102FDFB12400176E91 /* Recovered References */,
 			);
@@ -122,6 +132,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000022 /* YamanoteRunnerTests.swift */,
+				A1000000000000000000009C /* WalkingTargetCalculatorTests.swift */,
 			);
 			path = YamanoteRunnerTests;
 			sourceTree = "<group>";
@@ -163,6 +174,7 @@
 				A1000000000000000000002A /* HealthPermissionView.swift */,
 				A10000000000000000000021 /* HomeView.swift */,
 				A10000000000000000000092 /* MainTabView.swift */,
+				A1000000000000000000009A /* SubscriptionPaywallView.swift */,
 				A10000000000000000000033 /* YamanoteLineageView.swift */,
 				A10000000000000000000034 /* HistoryView.swift */,
 			);
@@ -181,6 +193,8 @@
 			children = (
 				A10000000000000000000029 /* HealthKitAuthorizationService.swift */,
 				A1000000000000000000002D /* HealthDistanceService.swift */,
+				A10000000000000000000096 /* SubscriptionService.swift */,
+				A10000000000000000000098 /* WalkingTargetCalculator.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -322,8 +336,11 @@
 				A1000000000000000000001F /* DirectionSelectionView.swift in Sources */,
 				A10000000000000000000011 /* HomeView.swift in Sources */,
 				A10000000000000000000093 /* MainTabView.swift in Sources */,
+				A1000000000000000000009B /* SubscriptionPaywallView.swift in Sources */,
 				A10000000000000000000090 /* YamanoteLineageView.swift in Sources */,
 				A10000000000000000000091 /* HistoryView.swift in Sources */,
+				A10000000000000000000097 /* SubscriptionService.swift in Sources */,
+				A10000000000000000000099 /* WalkingTargetCalculator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -332,6 +349,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000012 /* YamanoteRunnerTests.swift in Sources */,
+				A1000000000000000000009D /* WalkingTargetCalculatorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
