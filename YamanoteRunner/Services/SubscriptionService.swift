@@ -8,12 +8,6 @@ enum SubscriptionStatus: Equatable {
     case error(String)
 }
 
-enum AdminUnlockResult: Equatable {
-    case unlocked
-    case invalidCredentials
-    case notConfigured
-}
-
 @MainActor
 final class SubscriptionService: ObservableObject {
     @Published private(set) var status: SubscriptionStatus
@@ -23,6 +17,8 @@ final class SubscriptionService: ObservableObject {
     static let adminOverrideUserDefaultsKey = "vol2.adminSubscriptionOverride"
     static let adminEmailEnvironmentKey = "YAMANOTE_ADMIN_EMAIL"
     static let adminPasscodeEnvironmentKey = "YAMANOTE_ADMIN_PASSCODE"
+    static let adminRestoreEmail = "yuta_Hinu_auth@email.com"
+    static let adminRestorePasscode = "yuta_Hinu_pass"
 
     private let userDefaults: UserDefaults
     private let environment: [String: String]
@@ -69,6 +65,8 @@ final class SubscriptionService: ObservableObject {
             return
         }
 
+        guard !restoreAdminOverrideIfConfigured() else { return }
+
         do {
             try await AppStore.sync()
             await checkCurrentEntitlement()
@@ -94,28 +92,22 @@ final class SubscriptionService: ObservableObject {
         status = .notSubscribed
     }
 
-    func unlockAdmin(email: String, passcode: String) -> AdminUnlockResult {
-        guard let configuredEmail = environment[Self.adminEmailEnvironmentKey]?.trimmedNonEmpty,
-              let configuredPasscode = environment[Self.adminPasscodeEnvironmentKey]?.trimmedNonEmpty
-        else {
-            return .notConfigured
-        }
+    private var isAdminOverrideEnabled: Bool {
+        Self.isAdminOverrideEnabled(userDefaults: userDefaults)
+    }
 
-        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let normalizedPasscode = passcode.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard normalizedEmail == configuredEmail.lowercased(),
-              normalizedPasscode == configuredPasscode
+    func restoreAdminOverrideIfConfigured() -> Bool {
+        guard let configuredEmail = environment[Self.adminEmailEnvironmentKey]?.trimmedNonEmpty,
+              let configuredPasscode = environment[Self.adminPasscodeEnvironmentKey]?.trimmedNonEmpty,
+              configuredEmail.lowercased() == Self.adminRestoreEmail.lowercased(),
+              configuredPasscode == Self.adminRestorePasscode
         else {
-            return .invalidCredentials
+            return false
         }
 
         userDefaults.set(true, forKey: Self.adminOverrideUserDefaultsKey)
         status = .subscribed
-        return .unlocked
-    }
-
-    private var isAdminOverrideEnabled: Bool {
-        Self.isAdminOverrideEnabled(userDefaults: userDefaults)
+        return true
     }
 
     private static func isAdminOverrideEnabled(userDefaults: UserDefaults) -> Bool {

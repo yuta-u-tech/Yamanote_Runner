@@ -565,56 +565,40 @@ final class YamanoteRunnerTests: XCTestCase {
     }
 
     @MainActor
-    func testSubscriptionServiceUnlocksAdminWithEnvironmentCredentials() {
+    func testSubscriptionServiceRestoresAdminWithEnvironmentCredentials() async {
         let userDefaults = makeIsolatedUserDefaults()
         let service = SubscriptionService(
             initialStatus: .notSubscribed,
             userDefaults: userDefaults,
             environment: [
-                SubscriptionService.adminEmailEnvironmentKey: "admin@example.com",
-                SubscriptionService.adminPasscodeEnvironmentKey: "123456"
+                SubscriptionService.adminEmailEnvironmentKey: SubscriptionService.adminRestoreEmail,
+                SubscriptionService.adminPasscodeEnvironmentKey: SubscriptionService.adminRestorePasscode
             ]
         )
 
-        let result = service.unlockAdmin(email: " ADMIN@example.com ", passcode: " 123456 ")
+        await service.restorePurchases()
 
-        XCTAssertEqual(result, .unlocked)
         XCTAssertEqual(service.status, .subscribed)
         XCTAssertTrue(userDefaults.bool(forKey: SubscriptionService.adminOverrideUserDefaultsKey))
     }
 
     @MainActor
-    func testSubscriptionServiceRejectsInvalidAdminCredentials() {
+    func testSubscriptionServiceIgnoresInvalidAdminRestoreCredentials() {
         let userDefaults = makeIsolatedUserDefaults()
         let service = SubscriptionService(
             initialStatus: .notSubscribed,
             userDefaults: userDefaults,
             environment: [
-                SubscriptionService.adminEmailEnvironmentKey: "admin@example.com",
-                SubscriptionService.adminPasscodeEnvironmentKey: "123456"
+                SubscriptionService.adminEmailEnvironmentKey: SubscriptionService.adminRestoreEmail,
+                SubscriptionService.adminPasscodeEnvironmentKey: "wrong"
             ]
         )
 
-        let result = service.unlockAdmin(email: "admin@example.com", passcode: "000000")
+        let didRestore = service.restoreAdminOverrideIfConfigured()
 
-        XCTAssertEqual(result, .invalidCredentials)
-        XCTAssertEqual(service.status, .notSubscribed)
+        XCTAssertFalse(didRestore)
+        XCTAssertNotEqual(service.status, .subscribed)
         XCTAssertFalse(userDefaults.bool(forKey: SubscriptionService.adminOverrideUserDefaultsKey))
-    }
-
-    @MainActor
-    func testSubscriptionServiceReportsAdminCredentialsNotConfigured() {
-        let userDefaults = makeIsolatedUserDefaults()
-        let service = SubscriptionService(
-            initialStatus: .notSubscribed,
-            userDefaults: userDefaults,
-            environment: [:]
-        )
-
-        let result = service.unlockAdmin(email: "admin@example.com", passcode: "123456")
-
-        XCTAssertEqual(result, .notConfigured)
-        XCTAssertEqual(service.status, .notSubscribed)
     }
 
     private var fixedCalendar: Calendar {
