@@ -166,6 +166,44 @@ final class WalkingTargetCalculatorTests: XCTestCase {
         XCTAssertNil(state.selectedCandidate)
     }
 
+    func testWalkingGuidanceStartFromCurrentLocationUpdatesRemainingDistanceAndDirection() {
+        var state = WalkingGuidanceState()
+        let currentLocation = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
+        let candidate = makeGoalCandidate(id: "east-park", distanceMeters: 500, gapMeters: 20)
+
+        state.select(candidate, from: currentLocation)
+        state.start(from: currentLocation)
+
+        XCTAssertEqual(state.status, .guiding)
+        XCTAssertEqual(state.remainingDistanceMeters ?? 0, 500, accuracy: 2)
+        XCTAssertEqual(state.directionText(), "東")
+    }
+
+    func testWalkingGuidanceSelectionResetsInitialDistanceForNewCandidate() {
+        var state = WalkingGuidanceState()
+        let currentLocation = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
+        let firstCandidate = makeGoalCandidate(id: "near", distanceMeters: 300, gapMeters: 20)
+        let secondCandidate = makeGoalCandidate(id: "far", distanceMeters: 800, gapMeters: 10)
+
+        state.select(firstCandidate, from: currentLocation)
+        state.select(secondCandidate, from: currentLocation)
+
+        XCTAssertEqual(state.initialDistanceMeters ?? 0, 800, accuracy: 2)
+        XCTAssertEqual(state.remainingDistanceMeters ?? 0, 800, accuracy: 2)
+    }
+
+    func testWalkingGuidanceUsesRouteDistanceAsInitialDistanceBeforeStart() {
+        var state = WalkingGuidanceState()
+        let currentLocation = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
+        let candidate = makeGoalCandidate(id: "route-park", distanceMeters: 500, gapMeters: 20)
+
+        state.select(candidate, from: currentLocation)
+        state.updateRouteDistance(720)
+
+        XCTAssertEqual(state.initialDistanceMeters ?? 0, 720, accuracy: 0.001)
+        XCTAssertEqual(state.remainingDistanceMeters ?? 0, 720, accuracy: 0.001)
+    }
+
     func testWalkingGuidanceDetectsArrivalWithinThreshold() {
         var state = WalkingGuidanceState()
         let currentLocation = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
