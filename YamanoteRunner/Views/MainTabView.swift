@@ -108,7 +108,9 @@ private struct YamanoteMapView: View {
 
             VStack(spacing: 10) {
                 guidancePanel
-                candidatePanel
+                if guidanceState.status != .guiding && guidanceState.status != .arrived {
+                    candidatePanel
+                }
             }
             .padding(.horizontal, 14)
             .padding(.bottom, 12)
@@ -132,7 +134,7 @@ private struct YamanoteMapView: View {
     }
 
     private var guidancePanel: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
                 Image(systemName: "map.fill")
                     .font(.headline)
@@ -140,7 +142,7 @@ private struct YamanoteMapView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(progress.currentSegment.to.name)まであと\(formattedKilometers(targetDistanceKilometers))")
                         .font(.subheadline.weight(.semibold))
-                    Text("現実の目的地も約\(formattedMeters(targetDistanceMeters))で選択")
+                    Text("現実の目的地: 約\(formattedMeters(targetDistanceMeters))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -177,7 +179,7 @@ private struct YamanoteMapView: View {
                 guidanceControls
             }
         }
-        .padding(12)
+        .padding(10)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
@@ -205,6 +207,14 @@ private struct YamanoteMapView: View {
                 }
 
                 if guidanceState.status == .guiding || guidanceState.status == .arrived {
+                    HStack(spacing: 8) {
+                        Image(systemName: guidanceState.status == .arrived ? "checkmark.circle.fill" : "location.north.line.fill")
+                            .foregroundStyle(guidanceState.status == .arrived ? Color.green : Color.accentColor)
+                        Text(guidanceInstructionText)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                    }
                     ProgressView(value: guidanceState.progress)
                         .tint(.green)
                     Text(guidanceStatusText)
@@ -214,15 +224,18 @@ private struct YamanoteMapView: View {
 
                 HStack(spacing: 8) {
                     Button {
-                        guidanceState.start()
-                        locationService.startUpdating()
+                        if let location = locationService.location {
+                            guidanceState.start(from: location)
+                            locationService.startUpdating()
+                            fitCamera(user: location.coordinate, target: candidate.coordinate)
+                        }
                     } label: {
                         Label(primaryGuidanceButtonTitle, systemImage: primaryGuidanceButtonIcon)
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
-                    .disabled(guidanceState.status == .guiding || guidanceState.status == .arrived)
+                    .disabled(guidanceState.status == .guiding || guidanceState.status == .arrived || locationService.location == nil)
 
                     Button {
                         guidanceState.cancel()
@@ -237,7 +250,7 @@ private struct YamanoteMapView: View {
                 Button {
                     openInAppleMaps(candidate)
                 } label: {
-                    Label("Apple Maps", systemImage: "arrow.triangle.turn.up.right.circle")
+                    Label("Apple Mapsでも開く", systemImage: "arrow.triangle.turn.up.right.circle")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -276,49 +289,66 @@ private struct YamanoteMapView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(goalCandidates) { candidate in
-                        Button {
-                            select(candidate)
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: candidate.category.symbolName)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(candidate.category.tint)
-                                    .frame(width: 24, height: 24)
-                                    .background(candidate.category.tint.opacity(0.12))
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(goalCandidates) { candidate in
+                                Button {
+                                    select(candidate)
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: candidate.category.symbolName)
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(candidate.category.tint)
+                                            .frame(width: 24, height: 24)
+                                            .background(candidate.category.tint.opacity(0.12))
+                                            .clipShape(RoundedRectangle(cornerRadius: 6))
 
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(candidate.name)
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.primary)
-                                        .lineLimit(1)
-                                    Text("\(candidate.category.displayName) · \(formattedMeters(candidate.straightLineDistanceMeters)) · 差 \(formattedMeters(candidate.distanceGapMeters))")
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(candidate.name)
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(.primary)
+                                                .lineLimit(1)
+                                            Text("\(formattedMeters(candidate.straightLineDistanceMeters)) · 差 \(formattedMeters(candidate.distanceGapMeters))")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(1)
+                                        }
+
+                                        Spacer(minLength: 0)
+
+                                        Image(systemName: candidate.id == selectedCandidate?.id ? "checkmark.circle.fill" : "chevron.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(candidate.id == selectedCandidate?.id ? Color.green : Color.secondary)
+                                    }
+                                    .frame(width: 178, alignment: .leading)
+                                    .padding(8)
+                                    .background(.thinMaterial)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
-
-                                Spacer()
-
-                                Image(systemName: candidate.id == selectedCandidate?.id ? "checkmark.circle.fill" : "chevron.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(candidate.id == selectedCandidate?.id ? Color.green : Color.secondary)
+                                .buttonStyle(.plain)
                             }
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
         }
-        .padding(12)
+        .padding(10)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
+    private var guidanceInstructionText: String {
+        if guidanceState.status == .arrived {
+            return "目的地付近に到着しました"
+        }
+        let direction = guidanceState.directionText() ?? "目的地の方向"
+        let remaining = formattedMeters(guidanceState.remainingDistanceMeters ?? 0)
+        return "\(direction)へ約\(remaining)進んでください"
+    }
+
     private var guidanceStatusText: String {
         if guidanceState.status == .arrived {
-            return "到着しました。完了または別の候補を選択できます。"
+            return "到着しました。別の候補はキャンセル後に選択できます。"
         }
         return "残り \(formattedMeters(guidanceState.remainingDistanceMeters ?? 0)) · 進捗 \(guidanceState.progress.formatted(.percent.precision(.fractionLength(0))))"
     }

@@ -90,6 +90,7 @@ struct WalkingGuidanceState: Equatable {
     var selectedCandidate: WalkingGoalCandidate?
     var initialDistanceMeters: CLLocationDistance?
     var remainingDistanceMeters: CLLocationDistance?
+    var bearingDegrees: CLLocationDirection?
 
     var progress: Double {
         if status == .arrived {
@@ -103,9 +104,10 @@ struct WalkingGuidanceState: Equatable {
 
     mutating func select(_ candidate: WalkingGoalCandidate, from currentLocation: CLLocation) {
         selectedCandidate = candidate
-        let remainingDistance = Self.distance(from: currentLocation, to: candidate)
-        initialDistanceMeters = max(remainingDistance, 1)
-        remainingDistanceMeters = remainingDistance
+        initialDistanceMeters = nil
+        remainingDistanceMeters = nil
+        bearingDegrees = nil
+        updateMeasurements(from: currentLocation, to: candidate)
         status = .candidateSelected
     }
 
@@ -117,22 +119,45 @@ struct WalkingGuidanceState: Equatable {
         status = .guiding
     }
 
+    mutating func start(from currentLocation: CLLocation) {
+        guard let selectedCandidate else {
+            status = .failed
+            return
+        }
+        updateMeasurements(from: currentLocation, to: selectedCandidate)
+        status = .guiding
+    }
+
     mutating func cancel() {
         status = .idle
         selectedCandidate = nil
         initialDistanceMeters = nil
         remainingDistanceMeters = nil
+        bearingDegrees = nil
     }
 
     mutating func updateLocation(_ currentLocation: CLLocation, arrivalThresholdMeters: CLLocationDistance = 50) {
         guard let selectedCandidate else { return }
-        let remainingDistance = Self.distance(from: currentLocation, to: selectedCandidate)
+        updateMeasurements(from: currentLocation, to: selectedCandidate)
+        if (remainingDistanceMeters ?? .greatestFiniteMagnitude) <= arrivalThresholdMeters {
+            status = .arrived
+        }
+    }
+
+    func directionText() -> String? {
+        guard let bearingDegrees else { return nil }
+        let normalizedBearing = (bearingDegrees.truncatingRemainder(dividingBy: 360) + 360)
+            .truncatingRemainder(dividingBy: 360)
+        let index = Int((normalizedBearing + 22.5) / 45) % 8
+        return ["北", "北東", "東", "南東", "南", "南西", "西", "北西"][index]
+    }
+
+    private mutating func updateMeasurements(from location: CLLocation, to candidate: WalkingGoalCandidate) {
+        let remainingDistance = Self.distance(from: location, to: candidate)
         remainingDistanceMeters = remainingDistance
+        bearingDegrees = Self.bearing(from: location.coordinate, to: candidate.coordinate)
         if initialDistanceMeters == nil {
             initialDistanceMeters = max(remainingDistance, 1)
-        }
-        if remainingDistance <= arrivalThresholdMeters {
-            status = .arrived
         }
     }
 
@@ -141,6 +166,19 @@ struct WalkingGuidanceState: Equatable {
             latitude: candidate.coordinate.latitude,
             longitude: candidate.coordinate.longitude
         ))
+    }
+
+    private static func bearing(
+        from origin: CLLocationCoordinate2D,
+        to destination: CLLocationCoordinate2D
+    ) -> CLLocationDirection {
+        let originLatitude = origin.latitude * .pi / 180
+        let destinationLatitude = destination.latitude * .pi / 180
+        let longitudeDelta = (destination.longitude - origin.longitude) * .pi / 180
+        let y = sin(longitudeDelta) * cos(destinationLatitude)
+        let x = cos(originLatitude) * sin(destinationLatitude)
+            - sin(originLatitude) * cos(destinationLatitude) * cos(longitudeDelta)
+        return atan2(y, x) * 180 / .pi
     }
 }
 
