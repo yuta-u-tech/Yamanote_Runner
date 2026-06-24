@@ -136,6 +136,20 @@ struct WalkingGuidanceState: Equatable {
         }
     }
 
+    mutating func updateRouteDistance(
+        _ remainingDistance: CLLocationDistance,
+        resetInitialDistance: Bool = false,
+        arrivalThresholdMeters: CLLocationDistance = 50
+    ) {
+        remainingDistanceMeters = remainingDistance
+        if resetInitialDistance || initialDistanceMeters == nil {
+            initialDistanceMeters = max(remainingDistance, 1)
+        }
+        if remainingDistance <= arrivalThresholdMeters {
+            status = .arrived
+        }
+    }
+
     private static func distance(from location: CLLocation, to candidate: WalkingGoalCandidate) -> CLLocationDistance {
         location.distance(from: CLLocation(
             latitude: candidate.coordinate.latitude,

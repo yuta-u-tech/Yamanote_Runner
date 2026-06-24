@@ -193,6 +193,21 @@ final class WalkingTargetCalculatorTests: XCTestCase {
         XCTAssertEqual(state.progress, 1, accuracy: 0.001)
     }
 
+    func testWalkingGuidanceUsesRouteDistanceForRemainingProgress() {
+        var state = WalkingGuidanceState()
+        let currentLocation = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
+        let candidate = makeGoalCandidate(id: "route", distanceMeters: 500, gapMeters: 20)
+
+        state.select(candidate, from: currentLocation)
+        state.start()
+        state.updateRouteDistance(800, resetInitialDistance: true)
+        state.updateRouteDistance(200)
+
+        XCTAssertEqual(state.remainingDistanceMeters ?? 0, 200, accuracy: 0.001)
+        XCTAssertEqual(state.progress, 0.75, accuracy: 0.001)
+        XCTAssertEqual(state.status, .guiding)
+    }
+
     @MainActor
     func testWalkingGuidanceDoesNotMutateYamanoteCumulativeProgress() {
         let suiteName = "WalkingGuidanceNoMutation-\(UUID().uuidString)"
