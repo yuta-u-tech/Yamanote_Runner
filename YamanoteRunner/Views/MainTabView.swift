@@ -68,6 +68,9 @@ private struct YamanoteMapView: View {
     @State private var goalCandidates: [WalkingGoalCandidate] = []
     @State private var searchState: WalkingGoalSearchState = .idle
     @State private var guidanceState = WalkingGuidanceState()
+    @State private var walkingRoute: MKRoute?
+    @State private var routeState: WalkingRouteState = .idle
+    @State private var routeTask: Task<Void, Never>?
     @Environment(\.openURL) private var openURL
 
     private static let defaultRegion = MKCoordinateRegion(
@@ -81,17 +84,22 @@ private struct YamanoteMapView: View {
         WalkingGoalService.targetDistanceMeters(fromNextStationKilometers: targetDistanceKilometers)
     }
     private var selectedCandidate: WalkingGoalCandidate? { guidanceState.selectedCandidate }
+    private var isActivelyGuiding: Bool {
+        guidanceState.status == .guiding || guidanceState.status == .arrived
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
             Map(position: $cameraPosition) {
                 UserAnnotation()
 
-                if let candidate = selectedCandidate, let location = locationService.location {
+                if let candidate = selectedCandidate {
                     Marker(candidate.name, systemImage: "mappin.circle.fill", coordinate: candidate.coordinate)
                         .tint(.green)
-                    MapPolyline(coordinates: [location.coordinate, candidate.coordinate])
-                        .stroke(.green, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [10, 6]))
+                    if let walkingRoute {
+                        MapPolyline(walkingRoute.polyline)
+                            .stroke(.green, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                    }
                 }
 
                 ForEach(goalCandidates.filter { $0.id != selectedCandidate?.id }) { candidate in
@@ -107,8 +115,10 @@ private struct YamanoteMapView: View {
             .ignoresSafeArea(edges: .top)
 
             VStack(spacing: 10) {
-                guidancePanel
-                if guidanceState.status != .guiding && guidanceState.status != .arrived {
+                if isActivelyGuiding {
+                    activeGuidanceBar
+                } else {
+                    guidancePanel
                     candidatePanel
                 }
             }
@@ -122,6 +132,7 @@ private struct YamanoteMapView: View {
         }
         .onDisappear {
             locationService.stopUpdating()
+            routeTask?.cancel()
         }
         .onChange(of: locationService.location) { _, location in
             guard let location else { return }
@@ -131,6 +142,51 @@ private struct YamanoteMapView: View {
             guard let location = locationService.location else { return }
             searchGoals(from: location)
         }
+    }
+
+    private var activeGuidanceBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: guidanceState.status == .arrived ? "checkmark.circle.fill" : "figure.walk.motion")
+                .font(.headline)
+                .foregroundStyle(guidanceState.status == .arrived ? Color.green : Color.accentColor)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(guidanceInstructionText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Text(activeRouteStatusText)
+                    .font(.caption2)
+                    .foregroundStyle(guidanceState.status == .arrived ? Color.green : Color.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+
+            Button {
+                guard let location = locationService.location, let candidate = selectedCandidate else { return }
+                requestWalkingRoute(from: location, to: candidate, shouldFitCamera: true)
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.bordered)
+            .disabled(routeState == .loading || selectedCandidate == nil)
+            .accessibilityLabel("徒歩ルートを再設定")
+
+            Button {
+                cancelGuidance()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityLabel("案内を中断")
+        }
+        .padding(10)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
     private var guidancePanel: some View {
@@ -227,7 +283,7 @@ private struct YamanoteMapView: View {
                         if let location = locationService.location {
                             guidanceState.start(from: location)
                             locationService.startUpdating()
-                            fitCamera(user: location.coordinate, target: candidate.coordinate)
+                            requestWalkingRoute(from: location, to: candidate, shouldFitCamera: true)
                         }
                     } label: {
                         Label(primaryGuidanceButtonTitle, systemImage: primaryGuidanceButtonIcon)
@@ -238,7 +294,7 @@ private struct YamanoteMapView: View {
                     .disabled(guidanceState.status == .guiding || guidanceState.status == .arrived || locationService.location == nil)
 
                     Button {
-                        guidanceState.cancel()
+                        cancelGuidance()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .frame(width: 36, height: 36)
@@ -341,9 +397,28 @@ private struct YamanoteMapView: View {
         if guidanceState.status == .arrived {
             return "目的地付近に到着しました"
         }
+        if routeState == .loading {
+            return "徒歩ルートを取得中です"
+        }
         let direction = guidanceState.directionText() ?? "目的地の方向"
         let remaining = formattedMeters(guidanceState.remainingDistanceMeters ?? 0)
         return "\(direction)へ約\(remaining)進んでください"
+    }
+
+    private var activeRouteStatusText: String {
+        if guidanceState.status == .arrived {
+            return "別の候補は中断後に選択できます"
+        }
+        switch routeState {
+        case .idle:
+            return guidanceStatusText
+        case .loading:
+            return "道路に沿った徒歩経路を検索しています"
+        case .ready:
+            return "\(guidanceStatusText) · 徒歩ルート表示中"
+        case .failed:
+            return "\(guidanceStatusText) · 徒歩ルートを取得できませんでした"
+        }
     }
 
     private var guidanceStatusText: String {
@@ -367,18 +442,27 @@ private struct YamanoteMapView: View {
         }
 
         if let candidate = selectedCandidate {
-            fitCamera(user: location.coordinate, target: candidate.coordinate)
+            if walkingRoute == nil {
+                fitCamera(user: location.coordinate, target: candidate.coordinate)
+            }
+            if guidanceState.status == .guiding {
+                requestWalkingRoute(from: location, to: candidate, shouldFitCamera: false)
+            }
         } else {
             centerMap(on: location.coordinate)
         }
 
-        searchGoals(from: location)
+        if guidanceState.status != .guiding && guidanceState.status != .arrived {
+            searchGoals(from: location)
+        }
     }
 
     private func select(_ candidate: WalkingGoalCandidate) {
         guard let location = locationService.location else { return }
         guidanceState.select(candidate, from: location)
-        fitCamera(user: location.coordinate, target: candidate.coordinate)
+        walkingRoute = nil
+        routeState = .idle
+        requestWalkingRoute(from: location, to: candidate, shouldFitCamera: true)
     }
 
     private func centerMap(on coordinate: CLLocationCoordinate2D) {
@@ -411,6 +495,13 @@ private struct YamanoteMapView: View {
         }
     }
 
+    private func fitCamera(to mapRect: MKMapRect) {
+        let paddedRect = mapRect.insetBy(dx: -mapRect.width * 0.25, dy: -mapRect.height * 0.25)
+        withAnimation(.easeInOut(duration: 0.4)) {
+            cameraPosition = .region(MKCoordinateRegion(paddedRect))
+        }
+    }
+
     private func openInAppleMaps(_ candidate: WalkingGoalCandidate) {
         let placemark = MKPlacemark(coordinate: candidate.coordinate)
         let mapItem = MKMapItem(placemark: placemark)
@@ -418,6 +509,54 @@ private struct YamanoteMapView: View {
         mapItem.openInMaps(launchOptions: [
             MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeWalking
         ])
+    }
+
+    private func cancelGuidance() {
+        guidanceState.cancel()
+        walkingRoute = nil
+        routeState = .idle
+        routeTask?.cancel()
+        if let location = locationService.location {
+            searchGoals(from: location)
+            centerMap(on: location.coordinate)
+        }
+    }
+
+    private func requestWalkingRoute(
+        from location: CLLocation,
+        to candidate: WalkingGoalCandidate,
+        shouldFitCamera: Bool
+    ) {
+        routeTask?.cancel()
+        routeState = .loading
+        routeTask = Task {
+            do {
+                let route = try await WalkingRouteSearch.route(
+                    from: location.coordinate,
+                    to: candidate.coordinate
+                )
+                await MainActor.run {
+                    guard selectedCandidate?.id == candidate.id else { return }
+                    walkingRoute = route
+                    routeState = .ready
+                    guidanceState.updateRouteDistance(route.distance)
+                    if shouldFitCamera {
+                        fitCamera(to: route.polyline.boundingMapRect)
+                    }
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                await MainActor.run {
+                    guard selectedCandidate?.id == candidate.id else { return }
+                    walkingRoute = nil
+                    routeState = .failed
+                    if shouldFitCamera {
+                        fitCamera(user: location.coordinate, target: candidate.coordinate)
+                    }
+                }
+            }
+        }
     }
 
     private func searchGoals(from location: CLLocation) {
@@ -458,6 +597,13 @@ private enum LocationAuthorizationState {
     case notDetermined
     case denied
     case available
+}
+
+private enum WalkingRouteState: Equatable {
+    case idle
+    case loading
+    case ready
+    case failed
 }
 
 @MainActor
@@ -592,6 +738,29 @@ private enum WalkingGoalMapSearch {
             targetDistanceMeters: targetDistanceMeters
         )
     }
+}
+
+private enum WalkingRouteSearch {
+    static func route(
+        from sourceCoordinate: CLLocationCoordinate2D,
+        to destinationCoordinate: CLLocationCoordinate2D
+    ) async throws -> MKRoute {
+        let request = MKDirections.Request()
+        request.source = MKMapItem(placemark: MKPlacemark(coordinate: sourceCoordinate))
+        request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destinationCoordinate))
+        request.transportType = .walking
+        request.requestsAlternateRoutes = false
+
+        let response = try await MKDirections(request: request).calculate()
+        guard let route = response.routes.min(by: { $0.expectedTravelTime < $1.expectedTravelTime }) else {
+            throw WalkingRouteSearchError.routeNotFound
+        }
+        return route
+    }
+}
+
+private enum WalkingRouteSearchError: Error {
+    case routeNotFound
 }
 
 private extension WalkingGoalCategory {

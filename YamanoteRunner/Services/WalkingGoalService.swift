@@ -128,6 +128,13 @@ struct WalkingGuidanceState: Equatable {
         status = .guiding
     }
 
+    mutating func updateRouteDistance(_ distanceMeters: CLLocationDistance) {
+        remainingDistanceMeters = max(0, distanceMeters)
+        if status == .candidateSelected || initialDistanceMeters == nil {
+            initialDistanceMeters = max(distanceMeters, 1)
+        }
+    }
+
     mutating func cancel() {
         status = .idle
         selectedCandidate = nil
