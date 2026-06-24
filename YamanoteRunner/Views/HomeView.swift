@@ -162,7 +162,7 @@ struct HomeView: View {
 
             StationScrollList(
                 entries: stationEntries(),
-                nextStationID: routeProgress.currentSegment.to.id
+                nextStationID: nextStationEntryID()
             )
             .frame(maxHeight: .infinity)
 
@@ -197,17 +197,87 @@ struct HomeView: View {
         let passedSet = Set(routeProgress.passedStations.map(\.id))
         let nextID = routeProgress.currentSegment.to.id
 
-        return allStations.map { station in
-            let status: StationStatus
-            if passedSet.contains(station.id) {
-                status = .passed
-            } else if station.id == nextID {
-                status = .next
-            } else {
-                status = .upcoming
-            }
-            return StationListEntry(station: station, status: status)
+        var entries = allStations.enumerated().map { index, station in
+            let status = stationStatus(
+                for: station,
+                index: index,
+                passedSet: passedSet,
+                nextID: nextID
+            )
+            return StationListEntry(station: station, status: status, id: "\(station.id)-\(index)")
         }
+
+        let finishStatus: StationStatus
+        if nextID == appStateStore.startingStation.id {
+            finishStatus = .next
+        } else if routeProgress.completedLapCount > 0 {
+            finishStatus = .passed
+        } else {
+            finishStatus = .finish
+        }
+        entries.append(
+            StationListEntry(
+                station: appStateStore.startingStation,
+                status: finishStatus,
+                id: finishStationEntryID
+            )
+        )
+
+        return entries
+    }
+
+    private func nextStationEntryID() -> String {
+        if routeProgress.currentSegment.to.id == appStateStore.startingStation.id {
+            return finishStationEntryID
+        }
+
+        let allStations = YamanoteRoute.allStations(
+            startingAt: appStateStore.startingStation,
+            direction: appStateStore.selectedDirection
+        )
+        guard let index = allStations.firstIndex(of: routeProgress.currentSegment.to) else {
+            return routeProgress.currentSegment.to.id
+        }
+        return "\(routeProgress.currentSegment.to.id)-\(index)"
+    }
+
+    private var finishStationEntryID: String {
+        "\(appStateStore.startingStation.id)-finish"
+    }
+
+    private var nextStationDistanceText: String {
+        let distance = routeProgress.distanceToNextStationKilometers
+        if distance > 0, distance < 0.1 {
+            return "0.1km未満"
+        }
+        return formattedKilometers(distance)
+    }
+
+    private func progressPercent(_ progress: Double) -> String {
+        guard progress.isFinite, progress > 0 else { return "0%" }
+        if progress >= 1 { return "100%" }
+        return "\(min(99, Int((progress * 100).rounded(.down))))%"
+    }
+
+    private func stationStatus(
+        for station: YamanoteStation,
+        index: Int,
+        passedSet: Set<String>,
+        nextID: String
+    ) -> StationStatus {
+        if index == 0 {
+            return .start
+        }
+
+        if station.id == nextID {
+            return .next
+        }
+
+        if passedSet.contains(station.id) {
+            return .passed
+        }
+
+        return .upcoming
     }
 
     private var stationHeader: some View {
@@ -228,7 +298,7 @@ struct HomeView: View {
                 Text("次の駅まで")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("あと\(formattedKilometers(routeProgress.distanceToNextStationKilometers))")
+                Text("あと\(nextStationDistanceText)")
                     .font(.headline)
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
@@ -245,7 +315,7 @@ struct HomeView: View {
     }
 
     private var progressPercentText: String {
-        routeProgress.progressInCurrentLap.formatted(.percent.precision(.fractionLength(0)))
+        progressPercent(routeProgress.progressInCurrentLap)
     }
 
     private var passedStationsFractionText: String {
@@ -284,7 +354,7 @@ struct HomeView: View {
     }
 
     private var segmentProgressText: String {
-        routeProgress.progressInCurrentSegment.formatted(.percent.precision(.fractionLength(0)))
+        progressPercent(routeProgress.progressInCurrentSegment)
     }
 
     private func formattedKilometers(_ distanceKilometers: Double) -> String {
@@ -647,13 +717,13 @@ private struct SettingsValueRow: View {
 }
 
 private enum StationStatus {
-    case passed, next, upcoming
+    case start, passed, next, upcoming, finish
 }
 
 private struct StationListEntry: Identifiable {
     let station: YamanoteStation
     let status: StationStatus
-    var id: String { station.id }
+    let id: String
 }
 
 private struct StationScrollList: View {
@@ -713,27 +783,59 @@ private struct StationRow: View {
                 .frame(width: 6, height: 6)
             Text(entry.station.name)
                 .font(entry.status == .next ? .caption.weight(.bold) : .caption)
-                .foregroundStyle(entry.status == .passed ? .secondary : .primary)
+                .foregroundStyle(entry.status == .passed || entry.status == .finish ? .secondary : .primary)
             Spacer()
+            if let label = statusLabel {
+                Text(label)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(labelColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(labelColor.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
         }
         .padding(.vertical, 8)
+        .padding(.horizontal, 6)
         .frame(maxWidth: .infinity)
         .background(rowBackground)
     }
 
     private var dotColor: Color {
         switch entry.status {
+        case .start:    return .blue
         case .passed:   return Color(.systemGray3)
         case .next:     return .green
         case .upcoming: return Color(.systemGray4)
+        case .finish:   return .orange
         }
     }
 
     private var rowBackground: Color {
         switch entry.status {
+        case .start:    return Color.blue.opacity(0.10)
         case .passed:   return Color(.systemGray6)
         case .next:     return Color.green.opacity(0.12)
         case .upcoming: return .clear
+        case .finish:   return Color.orange.opacity(0.08)
+        }
+    }
+
+    private var statusLabel: String? {
+        switch entry.status {
+        case .start: return "開始"
+        case .next: return "次"
+        case .finish: return "一周"
+        case .passed, .upcoming: return nil
+        }
+    }
+
+    private var labelColor: Color {
+        switch entry.status {
+        case .start: return .blue
+        case .next: return .green
+        case .finish: return .orange
+        case .passed, .upcoming: return .secondary
         }
     }
 }

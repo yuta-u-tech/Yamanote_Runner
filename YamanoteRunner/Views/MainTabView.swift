@@ -50,13 +50,11 @@ private struct MapTabView: View {
         switch subscriptionService.status {
         case .subscribed:
             YamanoteMapView(appStateStore: appStateStore)
-        case .notSubscribed:
+        case .notSubscribed, .error:
             SubscriptionPaywallView()
         case .loading:
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case .error(let message):
-            ContentUnavailableView(message, systemImage: "exclamationmark.triangle")
         }
     }
 }
