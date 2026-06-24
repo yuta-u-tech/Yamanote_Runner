@@ -31,6 +31,7 @@
 		A10000000000000000000099 /* WalkingTargetCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000098 /* WalkingTargetCalculator.swift */; };
 		A1000000000000000000009B /* SubscriptionPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009A /* SubscriptionPaywallView.swift */; };
 		A1000000000000000000009D /* WalkingTargetCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009C /* WalkingTargetCalculatorTests.swift */; };
+		A100000000000000000000A0 /* WalkingGoalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009F /* WalkingGoalService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,6 +73,7 @@
 		A1000000000000000000009A /* SubscriptionPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionPaywallView.swift; sourceTree = "<group>"; };
 		A1000000000000000000009C /* WalkingTargetCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkingTargetCalculatorTests.swift; sourceTree = "<group>"; };
 		A1000000000000000000009E /* YamanoteRunner.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = YamanoteRunner.storekit; sourceTree = "<group>"; };
+		A1000000000000000000009F /* WalkingGoalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkingGoalService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -195,6 +197,7 @@
 				A1000000000000000000002D /* HealthDistanceService.swift */,
 				A10000000000000000000096 /* SubscriptionService.swift */,
 				A10000000000000000000098 /* WalkingTargetCalculator.swift */,
+				A1000000000000000000009F /* WalkingGoalService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -341,6 +344,7 @@
 				A10000000000000000000091 /* HistoryView.swift in Sources */,
 				A10000000000000000000097 /* SubscriptionService.swift in Sources */,
 				A10000000000000000000099 /* WalkingTargetCalculator.swift in Sources */,
+				A100000000000000000000A0 /* WalkingGoalService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

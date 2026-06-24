@@ -117,4 +117,123 @@ final class WalkingTargetCalculatorTests: XCTestCase {
         let actualDistance = originLocation.distance(from: resultLocation)
         XCTAssertEqual(actualDistance, distanceMeters, accuracy: accuracy)
     }
+
+    func testWalkingGoalTargetDistanceConvertsNextStationKilometersToMeters() {
+        XCTAssertEqual(
+            WalkingGoalService.targetDistanceMeters(fromNextStationKilometers: 1.3),
+            1300,
+            accuracy: 0.001
+        )
+    }
+
+    func testWalkingGoalRankingSortsByDistanceGap() {
+        let candidates = [
+            makeGoalCandidate(id: "far-gap", distanceMeters: 1500, gapMeters: 300),
+            makeGoalCandidate(id: "closest-gap", distanceMeters: 1180, gapMeters: 20),
+            makeGoalCandidate(id: "middle-gap", distanceMeters: 1100, gapMeters: 100)
+        ]
+
+        let ranked = WalkingGoalService.rankedCandidates(candidates, targetDistanceMeters: 1200)
+
+        XCTAssertEqual(ranked.map(\.id), ["closest-gap", "middle-gap", "far-gap"])
+    }
+
+    func testWalkingGoalRankingFiltersExtremelyCloseCandidatesForMeaningfulTarget() {
+        let candidates = [
+            makeGoalCandidate(id: "too-close", distanceMeters: 100, gapMeters: 900),
+            makeGoalCandidate(id: "usable", distanceMeters: 850, gapMeters: 150)
+        ]
+
+        let ranked = WalkingGoalService.rankedCandidates(candidates, targetDistanceMeters: 1000)
+
+        XCTAssertEqual(ranked.map(\.id), ["usable"])
+    }
+
+    func testWalkingGuidanceTransitionsFromSelectionToGuidingAndCancel() {
+        var state = WalkingGuidanceState()
+        let currentLocation = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
+        let candidate = makeGoalCandidate(id: "park", distanceMeters: 500, gapMeters: 20)
+
+        state.select(candidate, from: currentLocation)
+        XCTAssertEqual(state.status, .candidateSelected)
+        XCTAssertEqual(state.selectedCandidate?.id, "park")
+
+        state.start()
+        XCTAssertEqual(state.status, .guiding)
+
+        state.cancel()
+        XCTAssertEqual(state.status, .idle)
+        XCTAssertNil(state.selectedCandidate)
+    }
+
+    func testWalkingGuidanceDetectsArrivalWithinThreshold() {
+        var state = WalkingGuidanceState()
+        let currentLocation = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
+        let nearbyCoordinate = WalkingTargetCalculator.destination(
+            from: origin,
+            bearingDegrees: 90,
+            distanceMeters: 40
+        )
+        let candidate = WalkingGoalCandidate(
+            id: "nearby",
+            name: "近い公園",
+            coordinate: nearbyCoordinate,
+            category: .park,
+            straightLineDistanceMeters: 40,
+            distanceGapMeters: 0,
+            address: nil,
+            sourceName: nil
+        )
+
+        state.select(candidate, from: currentLocation)
+        state.start()
+        state.updateLocation(currentLocation, arrivalThresholdMeters: 50)
+
+        XCTAssertEqual(state.status, .arrived)
+        XCTAssertEqual(state.progress, 1, accuracy: 0.001)
+    }
+
+    @MainActor
+    func testWalkingGuidanceDoesNotMutateYamanoteCumulativeProgress() {
+        let suiteName = "WalkingGuidanceNoMutation-\(UUID().uuidString)"
+        let userDefaults = UserDefaults(suiteName: suiteName)!
+        defer { userDefaults.removePersistentDomain(forName: suiteName) }
+        userDefaults.set(1.2, forKey: "cumulativeDistanceKilometers")
+        let store = AppStateStore(userDefaults: userDefaults)
+        let beforeDistance = store.cumulativeDistanceKilometers
+        let beforeSegment = store.routeProgress.currentSegment
+
+        var state = WalkingGuidanceState()
+        let currentLocation = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
+        let candidate = makeGoalCandidate(id: "cafe", distanceMeters: 500, gapMeters: 50)
+        state.select(candidate, from: currentLocation)
+        state.start()
+        state.updateLocation(currentLocation)
+
+        XCTAssertEqual(store.cumulativeDistanceKilometers, beforeDistance, accuracy: 0.001)
+        XCTAssertEqual(store.routeProgress.currentSegment.from.name, beforeSegment.from.name)
+        XCTAssertEqual(store.routeProgress.currentSegment.to.name, beforeSegment.to.name)
+    }
+
+    private func makeGoalCandidate(
+        id: String,
+        distanceMeters: CLLocationDistance,
+        gapMeters: CLLocationDistance
+    ) -> WalkingGoalCandidate {
+        WalkingGoalCandidate(
+            id: id,
+            name: id,
+            coordinate: WalkingTargetCalculator.destination(
+                from: origin,
+                bearingDegrees: 90,
+                distanceMeters: distanceMeters
+            ),
+            category: .park,
+            straightLineDistanceMeters: distanceMeters,
+            distanceGapMeters: gapMeters,
+            address: nil,
+            sourceName: nil
+        )
+    }
+
 }
