@@ -637,6 +637,18 @@ private struct SettingsView: View {
                 )
             }
 
+            Section("サポート") {
+                NavigationLink {
+                    SupportView()
+                } label: {
+                    SettingsValueRow(
+                        symbol: "questionmark.circle.fill",
+                        title: "サポート",
+                        value: "問い合わせ・よくある相談"
+                    )
+                }
+            }
+
             Section {
                 Button("初回設定をやり直す", role: .destructive) {
                     appStateStore.restartSetup()

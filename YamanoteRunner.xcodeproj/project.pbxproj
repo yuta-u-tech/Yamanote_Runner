@@ -30,6 +30,7 @@
 		A10000000000000000000097 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000096 /* SubscriptionService.swift */; };
 		A10000000000000000000099 /* WalkingTargetCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000098 /* WalkingTargetCalculator.swift */; };
 		A1000000000000000000009B /* SubscriptionPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009A /* SubscriptionPaywallView.swift */; };
+		A100000000000000000000A1 /* SupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000000000000000000A2 /* SupportView.swift */; };
 		A1000000000000000000009D /* WalkingTargetCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009C /* WalkingTargetCalculatorTests.swift */; };
 		A100000000000000000000A0 /* WalkingGoalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000009F /* WalkingGoalService.swift */; };
 /* End PBXBuildFile section */
@@ -71,6 +72,7 @@
 		A10000000000000000000096 /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
 		A10000000000000000000098 /* WalkingTargetCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkingTargetCalculator.swift; sourceTree = "<group>"; };
 		A1000000000000000000009A /* SubscriptionPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionPaywallView.swift; sourceTree = "<group>"; };
+		A100000000000000000000A2 /* SupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportView.swift; sourceTree = "<group>"; };
 		A1000000000000000000009C /* WalkingTargetCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkingTargetCalculatorTests.swift; sourceTree = "<group>"; };
 		A1000000000000000000009E /* YamanoteRunner.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = YamanoteRunner.storekit; sourceTree = "<group>"; };
 		A1000000000000000000009F /* WalkingGoalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkingGoalService.swift; sourceTree = "<group>"; };
@@ -177,6 +179,7 @@
 				A10000000000000000000021 /* HomeView.swift */,
 				A10000000000000000000092 /* MainTabView.swift */,
 				A1000000000000000000009A /* SubscriptionPaywallView.swift */,
+				A100000000000000000000A2 /* SupportView.swift */,
 				A10000000000000000000033 /* YamanoteLineageView.swift */,
 				A10000000000000000000034 /* HistoryView.swift */,
 			);
@@ -340,6 +343,7 @@
 				A10000000000000000000011 /* HomeView.swift in Sources */,
 				A10000000000000000000093 /* MainTabView.swift in Sources */,
 				A1000000000000000000009B /* SubscriptionPaywallView.swift in Sources */,
+				A100000000000000000000A1 /* SupportView.swift in Sources */,
 				A10000000000000000000090 /* YamanoteLineageView.swift in Sources */,
 				A10000000000000000000091 /* HistoryView.swift in Sources */,
 				A10000000000000000000097 /* SubscriptionService.swift in Sources */,
