@@ -634,6 +634,26 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertFalse(userDefaults.bool(forKey: SubscriptionService.developerAccessUserDefaultsKey))
     }
 
+    #if DEBUG
+    @MainActor
+    func testDummyAppStateIncludesBadgesMatchingPreviewProgress() {
+        let store = AppStateStore.makeDummy()
+
+        XCTAssertTrue(store.unlockedBadgeIDs.contains(RunnerBadge.startBadgeID))
+        XCTAssertTrue(store.unlockedBadgeIDs.contains(RunnerBadge.threeStationsBadgeID))
+        XCTAssertTrue(store.unlockedBadgeIDs.contains(RunnerBadge.halfLoopBadgeID))
+        XCTAssertFalse(store.unlockedBadgeIDs.contains(RunnerBadge.fullLoopBadgeID))
+        XCTAssertEqual(
+            RunnerBadge.all(unlockedBadgeIDs: store.unlockedBadgeIDs).filter(\.isUnlocked).map(\.id),
+            [
+                RunnerBadge.startBadgeID,
+                RunnerBadge.threeStationsBadgeID,
+                RunnerBadge.halfLoopBadgeID
+            ]
+        )
+    }
+    #endif
+
     private var fixedCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

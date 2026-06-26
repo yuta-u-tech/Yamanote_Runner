@@ -14,6 +14,14 @@ extension AppStateStore {
         defaults.set(18.0, forKey: "cumulativeDistanceKilometers")
         defaults.set(3.2, forKey: "lastSyncedTodayDistanceKilometers")
         defaults.set(Date(), forKey: "lastSyncDate")
+        defaults.set(
+            [
+                RunnerBadge.startBadgeID,
+                RunnerBadge.threeStationsBadgeID,
+                RunnerBadge.halfLoopBadgeID
+            ],
+            forKey: "unlockedBadgeIDs"
+        )
 
         return AppStateStore(userDefaults: defaults)
     }
