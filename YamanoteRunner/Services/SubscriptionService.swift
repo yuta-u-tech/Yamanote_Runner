@@ -14,11 +14,12 @@ final class SubscriptionService: ObservableObject {
     @Published private(set) var availableProducts: [Product] = []
 
     static let productIDs: Set<String> = ["com.yamanoterunner.pro.monthly"]
-    static let adminOverrideUserDefaultsKey = "vol2.adminSubscriptionOverride"
+
+    #if DEBUG
+    static let developerAccessUserDefaultsKey = "vol2.developerSubscriptionAccess"
     static let adminEmailEnvironmentKey = "YAMANOTE_ADMIN_EMAIL"
     static let adminPasscodeEnvironmentKey = "YAMANOTE_ADMIN_PASSCODE"
-    static let adminRestoreEmail = "yuta_Hinu_auth@email.com"
-    static let adminRestorePasscode = "yuta_Hinu_pass"
+    #endif
 
     private let userDefaults: UserDefaults
     private let environment: [String: String]
@@ -30,11 +31,11 @@ final class SubscriptionService: ObservableObject {
     ) {
         self.userDefaults = userDefaults
         self.environment = environment
-        status = Self.isAdminOverrideEnabled(userDefaults: userDefaults) ? .subscribed : initialStatus
+        status = Self.isDeveloperAccessEnabled(userDefaults: userDefaults) ? .subscribed : initialStatus
     }
 
     func loadProducts() async {
-        guard !isAdminOverrideEnabled else { return }
+        guard !isDeveloperAccessEnabled else { return }
 
         do {
             let products = try await Product.products(for: Self.productIDs)
@@ -60,12 +61,14 @@ final class SubscriptionService: ObservableObject {
     }
 
     func restorePurchases() async {
-        guard !isAdminOverrideEnabled else {
+        guard !isDeveloperAccessEnabled else {
             status = .subscribed
             return
         }
 
-        guard !restoreAdminOverrideIfConfigured() else { return }
+        #if DEBUG
+        guard !restoreDeveloperAccessFromEnvironment() else { return }
+        #endif
 
         do {
             try await AppStore.sync()
@@ -76,7 +79,7 @@ final class SubscriptionService: ObservableObject {
     }
 
     func checkCurrentEntitlement() async {
-        guard !isAdminOverrideEnabled else {
+        guard !isDeveloperAccessEnabled else {
             status = .subscribed
             return
         }
@@ -92,39 +95,33 @@ final class SubscriptionService: ObservableObject {
         status = .notSubscribed
     }
 
-    private var isAdminOverrideEnabled: Bool {
-        Self.isAdminOverrideEnabled(userDefaults: userDefaults)
+    private var isDeveloperAccessEnabled: Bool {
+        Self.isDeveloperAccessEnabled(userDefaults: userDefaults)
     }
 
-    func restoreAdminOverrideIfConfigured() -> Bool {
-        if let configuredEmail = environment[Self.adminEmailEnvironmentKey]?.trimmedNonEmpty,
-           let configuredPasscode = environment[Self.adminPasscodeEnvironmentKey]?.trimmedNonEmpty {
-            guard configuredEmail.lowercased() == Self.adminRestoreEmail.lowercased(),
-                  configuredPasscode == Self.adminRestorePasscode
-            else {
-                return false
-            }
-            return enableAdminOverride()
+    #if DEBUG
+    func restoreDeveloperAccessFromEnvironment() -> Bool {
+        guard environment[Self.adminEmailEnvironmentKey]?.trimmedNonEmpty != nil,
+              environment[Self.adminPasscodeEnvironmentKey]?.trimmedNonEmpty != nil
+        else {
+            return false
         }
-
-        #if DEBUG
-        return enableAdminOverride()
-        #else
-        return false
-        #endif
+        return enableDeveloperAccess()
     }
 
-    private func enableAdminOverride() -> Bool {
-        userDefaults.set(true, forKey: Self.adminOverrideUserDefaultsKey)
+    private func enableDeveloperAccess() -> Bool {
+        userDefaults.set(true, forKey: Self.developerAccessUserDefaultsKey)
         status = .subscribed
         return true
     }
+    #endif
 
-    private static func isAdminOverrideEnabled(userDefaults: UserDefaults) -> Bool {
-        let arguments = ProcessInfo.processInfo.arguments
-        return arguments.contains("-adminSubscription")
-            || arguments.contains("-admin")
-            || userDefaults.bool(forKey: adminOverrideUserDefaultsKey)
+    private static func isDeveloperAccessEnabled(userDefaults: UserDefaults) -> Bool {
+        #if DEBUG
+        userDefaults.bool(forKey: developerAccessUserDefaultsKey)
+        #else
+        false
+        #endif
     }
 
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
