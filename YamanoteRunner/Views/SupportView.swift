@@ -4,7 +4,7 @@ import UIKit
 struct SupportView: View {
     @Environment(\.openURL) private var openURL
 
-    private let supportEmail = "support@example.com"
+    private let supportEmail = "yutautech@gmail.com"
 
     var body: some View {
         ScrollView {
