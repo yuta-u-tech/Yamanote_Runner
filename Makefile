@@ -3,10 +3,8 @@ PROJECT=YamanoteRunner.xcodeproj
 DERIVED_DATA=.build
 SIMULATOR=iPhone 17
 BUNDLE_ID=com.youbo0129ueno.YamanoteRunner
-ADMIN_EMAIL?=local-admin
-ADMIN_PASSCODE?=local-passcode
 
-.PHONY: build test boot install launch launch-preview launch-admin run run-preview run-admin clean
+.PHONY: build test boot install launch launch-preview run run-preview clean
 
 build:
 	xcodebuild \
@@ -41,18 +39,9 @@ launch-preview:
 	xcrun simctl terminate booted $(BUNDLE_ID) || true
 	xcrun simctl launch booted $(BUNDLE_ID) -dummy
 
-launch-admin:
-	xcrun simctl terminate booted $(BUNDLE_ID) || true
-	xcrun simctl launch booted \
-		--env YAMANOTE_ADMIN_EMAIL "$(ADMIN_EMAIL)" \
-		--env YAMANOTE_ADMIN_PASSCODE "$(ADMIN_PASSCODE)" \
-		$(BUNDLE_ID)
-
 run: build boot install launch
 
 run-preview: build boot install launch-preview
-
-run-admin: build boot install launch-admin
 
 clean:
 	rm -rf $(DERIVED_DATA)

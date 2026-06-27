@@ -15,28 +15,29 @@ final class SubscriptionService: ObservableObject {
 
     static let productIDs: Set<String> = ["com.yamanoterunner.pro.monthly"]
 
-    #if DEBUG
-    static let developerAccessUserDefaultsKey = "vol2.developerSubscriptionAccess"
-    static let adminEmailEnvironmentKey = "YAMANOTE_ADMIN_EMAIL"
-    static let adminPasscodeEnvironmentKey = "YAMANOTE_ADMIN_PASSCODE"
-    #endif
+    private static let legacyDeveloperAccessKeys = [
+        "vol2.developerSubscriptionAccess",
+        "vol2.adminSubscriptionOverride"
+    ]
 
-    private let userDefaults: UserDefaults
-    private let environment: [String: String]
+    private let syncPurchases: () async throws -> Void
+    private let currentEntitledProductIDs: () async -> Set<String>
 
     init(
         initialStatus: SubscriptionStatus = .loading,
         userDefaults: UserDefaults = .standard,
-        environment: [String: String] = ProcessInfo.processInfo.environment
+        syncPurchases: @escaping () async throws -> Void = { try await AppStore.sync() },
+        currentEntitledProductIDs: @escaping () async -> Set<String> = {
+            await SubscriptionService.loadCurrentEntitledProductIDs()
+        }
     ) {
-        self.userDefaults = userDefaults
-        self.environment = environment
-        status = Self.isDeveloperAccessEnabled(userDefaults: userDefaults) ? .subscribed : initialStatus
+        Self.legacyDeveloperAccessKeys.forEach(userDefaults.removeObject(forKey:))
+        self.syncPurchases = syncPurchases
+        self.currentEntitledProductIDs = currentEntitledProductIDs
+        status = initialStatus
     }
 
     func loadProducts() async {
-        guard !isDeveloperAccessEnabled else { return }
-
         do {
             let products = try await Product.products(for: Self.productIDs)
             availableProducts = products.sorted { $0.price < $1.price }
@@ -61,17 +62,8 @@ final class SubscriptionService: ObservableObject {
     }
 
     func restorePurchases() async {
-        guard !isDeveloperAccessEnabled else {
-            status = .subscribed
-            return
-        }
-
-        #if DEBUG
-        guard !restoreDeveloperAccessFromEnvironment() else { return }
-        #endif
-
         do {
-            try await AppStore.sync()
+            try await syncPurchases()
             await checkCurrentEntitlement()
         } catch {
             status = .error("購入の復元に失敗しました")
@@ -79,49 +71,21 @@ final class SubscriptionService: ObservableObject {
     }
 
     func checkCurrentEntitlement() async {
-        guard !isDeveloperAccessEnabled else {
-            status = .subscribed
-            return
-        }
+        let entitledProductIDs = await currentEntitledProductIDs()
+        status = entitledProductIDs.isDisjoint(with: Self.productIDs)
+            ? .notSubscribed
+            : .subscribed
+    }
 
+    private nonisolated static func loadCurrentEntitledProductIDs() async -> Set<String> {
+        var productIDs: Set<String> = []
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result,
-               Self.productIDs.contains(transaction.productID),
                transaction.revocationDate == nil {
-                status = .subscribed
-                return
+                productIDs.insert(transaction.productID)
             }
         }
-        status = .notSubscribed
-    }
-
-    private var isDeveloperAccessEnabled: Bool {
-        Self.isDeveloperAccessEnabled(userDefaults: userDefaults)
-    }
-
-    #if DEBUG
-    func restoreDeveloperAccessFromEnvironment() -> Bool {
-        guard environment[Self.adminEmailEnvironmentKey]?.trimmedNonEmpty != nil,
-              environment[Self.adminPasscodeEnvironmentKey]?.trimmedNonEmpty != nil
-        else {
-            return false
-        }
-        return enableDeveloperAccess()
-    }
-
-    private func enableDeveloperAccess() -> Bool {
-        userDefaults.set(true, forKey: Self.developerAccessUserDefaultsKey)
-        status = .subscribed
-        return true
-    }
-    #endif
-
-    private static func isDeveloperAccessEnabled(userDefaults: UserDefaults) -> Bool {
-        #if DEBUG
-        userDefaults.bool(forKey: developerAccessUserDefaultsKey)
-        #else
-        false
-        #endif
+        return productIDs
     }
 
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
@@ -136,11 +100,4 @@ final class SubscriptionService: ObservableObject {
 
 enum SubscriptionError: Error {
     case failedVerification
-}
-
-private extension String {
-    var trimmedNonEmpty: String? {
-        let value = trimmingCharacters(in: .whitespacesAndNewlines)
-        return value.isEmpty ? nil : value
-    }
 }

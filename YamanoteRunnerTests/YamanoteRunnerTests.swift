@@ -544,94 +544,50 @@ final class YamanoteRunnerTests: XCTestCase {
     }
 
     @MainActor
-    func testSubscriptionServiceUsesAdminOverrideFromUserDefaults() {
+    func testSubscriptionServiceClearsLegacyAdminOverridesWithoutUnlocking() {
         let userDefaults = makeIsolatedUserDefaults()
-        userDefaults.set(true, forKey: SubscriptionService.developerAccessUserDefaultsKey)
+        let legacyKeys = [
+            "vol2.developerSubscriptionAccess",
+            "vol2.adminSubscriptionOverride"
+        ]
+        legacyKeys.forEach { userDefaults.set(true, forKey: $0) }
 
-        let service = SubscriptionService(userDefaults: userDefaults)
-
-        XCTAssertEqual(service.status, .subscribed)
-    }
-
-    @MainActor
-    func testSubscriptionServiceKeepsAdminOverrideWhenCheckingEntitlement() async {
-        let userDefaults = makeIsolatedUserDefaults()
-        userDefaults.set(true, forKey: SubscriptionService.developerAccessUserDefaultsKey)
         let service = SubscriptionService(initialStatus: .notSubscribed, userDefaults: userDefaults)
 
-        await service.checkCurrentEntitlement()
-
-        XCTAssertEqual(service.status, .subscribed)
+        XCTAssertEqual(service.status, .notSubscribed)
+        legacyKeys.forEach { XCTAssertNil(userDefaults.object(forKey: $0)) }
     }
 
     @MainActor
-    func testSubscriptionServiceRestoresDeveloperAccessWithEnvironmentCredentials() async {
+    func testSubscriptionServiceDoesNotRestoreWithoutStoreKitEntitlement() async {
+        let userDefaults = makeIsolatedUserDefaults()
+        var didSync = false
+        let service = SubscriptionService(
+            initialStatus: .notSubscribed,
+            userDefaults: userDefaults,
+            syncPurchases: { didSync = true },
+            currentEntitledProductIDs: { [] }
+        )
+
+        await service.restorePurchases()
+
+        XCTAssertTrue(didSync)
+        XCTAssertEqual(service.status, .notSubscribed)
+    }
+
+    @MainActor
+    func testSubscriptionServiceRestoresValidStoreKitEntitlement() async {
         let userDefaults = makeIsolatedUserDefaults()
         let service = SubscriptionService(
             initialStatus: .notSubscribed,
             userDefaults: userDefaults,
-            environment: [
-                SubscriptionService.adminEmailEnvironmentKey: "developer@example.com",
-                SubscriptionService.adminPasscodeEnvironmentKey: "local-passcode"
-            ]
+            syncPurchases: {},
+            currentEntitledProductIDs: { SubscriptionService.productIDs }
         )
 
         await service.restorePurchases()
 
         XCTAssertEqual(service.status, .subscribed)
-        XCTAssertTrue(userDefaults.bool(forKey: SubscriptionService.developerAccessUserDefaultsKey))
-    }
-
-    @MainActor
-    func testSubscriptionServiceDoesNotRestoreDeveloperAccessWithoutCredentials() {
-        let userDefaults = makeIsolatedUserDefaults()
-        let service = SubscriptionService(
-            initialStatus: .notSubscribed,
-            userDefaults: userDefaults,
-            environment: [:]
-        )
-
-        let didRestore = service.restoreDeveloperAccessFromEnvironment()
-
-        XCTAssertFalse(didRestore)
-        XCTAssertEqual(service.status, .notSubscribed)
-        XCTAssertFalse(userDefaults.bool(forKey: SubscriptionService.developerAccessUserDefaultsKey))
-    }
-
-    @MainActor
-    func testSubscriptionServiceDoesNotRestoreDeveloperAccessWithOnlyEmail() {
-        let userDefaults = makeIsolatedUserDefaults()
-        let service = SubscriptionService(
-            initialStatus: .notSubscribed,
-            userDefaults: userDefaults,
-            environment: [
-                SubscriptionService.adminEmailEnvironmentKey: "developer@example.com"
-            ]
-        )
-
-        let didRestore = service.restoreDeveloperAccessFromEnvironment()
-
-        XCTAssertFalse(didRestore)
-        XCTAssertEqual(service.status, .notSubscribed)
-        XCTAssertFalse(userDefaults.bool(forKey: SubscriptionService.developerAccessUserDefaultsKey))
-    }
-
-    @MainActor
-    func testSubscriptionServiceDoesNotRestoreDeveloperAccessWithOnlyPasscode() {
-        let userDefaults = makeIsolatedUserDefaults()
-        let service = SubscriptionService(
-            initialStatus: .notSubscribed,
-            userDefaults: userDefaults,
-            environment: [
-                SubscriptionService.adminPasscodeEnvironmentKey: "local-passcode"
-            ]
-        )
-
-        let didRestore = service.restoreDeveloperAccessFromEnvironment()
-
-        XCTAssertFalse(didRestore)
-        XCTAssertNotEqual(service.status, .subscribed)
-        XCTAssertFalse(userDefaults.bool(forKey: SubscriptionService.developerAccessUserDefaultsKey))
     }
 
     #if DEBUG
