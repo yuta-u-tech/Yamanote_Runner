@@ -505,8 +505,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "山手線ランナー";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "歩行・ランニング距離を読み取り、山手線一周の進捗に反映します。";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "現在地から次の駅までの距離感に近い散歩ゴールを提案します。";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "歩数と歩行・ランニング距離を読み取り、山手線一周の進捗に反映します。";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "現在地から散歩ゴールを提案し、目的地まで案内します。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -515,7 +516,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.youbo0129ueno.YamanoteRunner;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -536,8 +537,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "山手線ランナー";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "歩行・ランニング距離を読み取り、山手線一周の進捗に反映します。";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "現在地から次の駅までの距離感に近い散歩ゴールを提案します。";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "歩数と歩行・ランニング距離を読み取り、山手線一周の進捗に反映します。";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "現在地から散歩ゴールを提案し、目的地まで案内します。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -546,7 +548,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.youbo0129ueno.YamanoteRunner;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

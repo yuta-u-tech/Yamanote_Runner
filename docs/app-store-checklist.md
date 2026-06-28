@@ -12,6 +12,11 @@
 | 内回り・外回りの進行方向 | 実装済み | `YamanoteRunnerTests` の方向別ルートテスト |
 | 一周達成・バッジ解放 | 実装済み | 34.5km 到達テスト |
 | Home 右上の設定導線 | 実装済み | Home 右上の歯車アイコン |
+| 初回リリースバージョン | 実装済み | `MARKETING_VERSION = 1.0` / Build `1` |
+| 輸出コンプライアンス | 実装済み | 独自暗号化なしをInfo.plistで宣言 |
+| App Storeメタデータ案 | 実装済み | `docs/app-store-metadata.md` |
+| Release Archive | 実装済み | Version 1.0 / Build 1でArchive成功 |
+| App Store配布署名 | 登録待ち | Apple Developer Program登録後にExport・Upload |
 
 ## Privacy / 文言
 
