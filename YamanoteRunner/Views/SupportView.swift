@@ -60,7 +60,10 @@ struct SupportView: View {
 
                 VStack(spacing: 8) {
                     Link("利用規約", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
-                    Link("プライバシーポリシー", destination: URL(string: "https://example.com/privacy")!)
+                    Link(
+                        "プライバシーポリシー",
+                        destination: URL(string: "https://yuta-u-tech.github.io/Supports/apps/yamanote-runner/privacy/")!
+                    )
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)

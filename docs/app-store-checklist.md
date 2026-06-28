@@ -18,7 +18,8 @@
 | 項目 | 状態 | 確認方法 |
 | --- | --- | --- |
 | HealthKit 使用説明文 | 実装済み | `INFOPLIST_KEY_NSHealthShareUsageDescription` |
-| Privacy Manifest | 未対応 | `PrivacyInfo.xcprivacy` の追加が必要 |
+| Privacy Manifest | 実装済み | `YamanoteRunner/PrivacyInfo.xcprivacy` |
+| プライバシーポリシー / サポートページ | 実装済み | GitHub Pages上の公開ページ |
 | App Store のプライバシー回答 | 未対応 | App Store Connect |
 | HealthKit データ用途の説明 | 実装済み | 権限画面・README |
 
@@ -45,7 +46,6 @@
 
 ## 追加Issue候補
 
-- Privacy Manifest の作成
 - App Store Connect 用スクリーンショット撮影
 - 実機HealthKit検証ログの記録
 - App Icon の実機表示と外周余白の最終確認
