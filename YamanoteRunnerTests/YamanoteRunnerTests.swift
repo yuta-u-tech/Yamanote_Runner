@@ -599,6 +599,8 @@ final class YamanoteRunnerTests: XCTestCase {
         XCTAssertTrue(store.unlockedBadgeIDs.contains(RunnerBadge.threeStationsBadgeID))
         XCTAssertTrue(store.unlockedBadgeIDs.contains(RunnerBadge.halfLoopBadgeID))
         XCTAssertFalse(store.unlockedBadgeIDs.contains(RunnerBadge.fullLoopBadgeID))
+        XCTAssertEqual(store.historyRecords.first?.distanceKilometers, 3.2)
+        XCTAssertEqual(store.historyRecords.first?.reachedStationName, "鶯谷")
         XCTAssertEqual(
             RunnerBadge.all(unlockedBadgeIDs: store.unlockedBadgeIDs).filter(\.isUnlocked).map(\.id),
             [

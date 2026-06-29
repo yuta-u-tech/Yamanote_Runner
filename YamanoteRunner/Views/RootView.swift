@@ -12,7 +12,10 @@ struct RootView: View {
         if ProcessInfo.processInfo.arguments.contains("-dummy") {
             isDummyPreview = true
             _appStateStore = StateObject(wrappedValue: AppStateStore.makeDummy())
-            _subscriptionService = StateObject(wrappedValue: SubscriptionService(initialStatus: .subscribed))
+            _subscriptionService = StateObject(wrappedValue: SubscriptionService(
+                initialStatus: .subscribed,
+                currentEntitledProductIDs: { SubscriptionService.productIDs }
+            ))
             return
         }
         #endif
