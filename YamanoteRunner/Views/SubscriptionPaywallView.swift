@@ -65,6 +65,11 @@ struct SubscriptionPaywallView: View {
                         }
                     }
                     .disabled(isPurchasing || isRestoring)
+
+                    Text("サブスクリプションは1か月ごとに自動更新されます。更新日の24時間前までに解約しない限り自動的に更新され、購入後はApp Storeのアカウント設定から管理・解約できます。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
 
                 if let errorMessage {
